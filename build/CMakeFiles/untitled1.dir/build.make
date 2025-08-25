@@ -75,15 +75,15 @@ CMakeFiles/untitled1.dir/main.cpp.obj: CMakeFiles/untitled1.dir/flags.make
 CMakeFiles/untitled1.dir/main.cpp.obj: D:/Douglas/Pessoal/Coding/University/Semestre\ 5/Grafos/tp-grafos/main.cpp
 CMakeFiles/untitled1.dir/main.cpp.obj: CMakeFiles/untitled1.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir="D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\build\CMakeFiles" --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/untitled1.dir/main.cpp.obj"
-	C:\MinGW\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/untitled1.dir/main.cpp.obj -MF CMakeFiles\untitled1.dir\main.cpp.obj.d -o CMakeFiles\untitled1.dir\main.cpp.obj -c "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp"
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/untitled1.dir/main.cpp.obj -MF CMakeFiles\untitled1.dir\main.cpp.obj.d -o CMakeFiles\untitled1.dir\main.cpp.obj -c "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp"
 
 CMakeFiles/untitled1.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/untitled1.dir/main.cpp.i"
-	C:\MinGW\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp" > CMakeFiles\untitled1.dir\main.cpp.i
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp" > CMakeFiles\untitled1.dir\main.cpp.i
 
 CMakeFiles/untitled1.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/untitled1.dir/main.cpp.s"
-	C:\MinGW\bin\c++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp" -o CMakeFiles\untitled1.dir\main.cpp.s
+	C:\MinGW\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S "D:\Douglas\Pessoal\Coding\University\Semestre 5\Grafos\tp-grafos\main.cpp" -o CMakeFiles\untitled1.dir\main.cpp.s
 
 # Object files for target untitled1
 untitled1_OBJECTS = \

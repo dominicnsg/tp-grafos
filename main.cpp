@@ -47,6 +47,7 @@ int main() {
         for (int j = 0; j < V; j++) {
             if (i != j) {
                 grafo.adicionarAresta(i, j);
+                grafo.imprimirGrafo();
             }
         }
     }

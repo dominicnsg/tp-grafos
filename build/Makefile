@@ -152,6 +152,30 @@ main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\untitled1.dir\build.make CMakeFiles/untitled1.dir/main.cpp.s
 .PHONY : main.cpp.s
 
+utils/grafo.obj: utils/grafo.cpp.obj
+.PHONY : utils/grafo.obj
+
+# target to build an object file
+utils/grafo.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\untitled1.dir\build.make CMakeFiles/untitled1.dir/utils/grafo.cpp.obj
+.PHONY : utils/grafo.cpp.obj
+
+utils/grafo.i: utils/grafo.cpp.i
+.PHONY : utils/grafo.i
+
+# target to preprocess a source file
+utils/grafo.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\untitled1.dir\build.make CMakeFiles/untitled1.dir/utils/grafo.cpp.i
+.PHONY : utils/grafo.cpp.i
+
+utils/grafo.s: utils/grafo.cpp.s
+.PHONY : utils/grafo.s
+
+# target to generate assembly for a file
+utils/grafo.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\untitled1.dir\build.make CMakeFiles/untitled1.dir/utils/grafo.cpp.s
+.PHONY : utils/grafo.cpp.s
+
 # Help Target
 help:
 	@echo The following are some of the valid targets for this Makefile:
@@ -164,6 +188,9 @@ help:
 	@echo ... main.obj
 	@echo ... main.i
 	@echo ... main.s
+	@echo ... utils/grafo.obj
+	@echo ... utils/grafo.i
+	@echo ... utils/grafo.s
 .PHONY : help
 
 

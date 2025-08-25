@@ -4,5 +4,11 @@
   "command": "C:\\MinGW\\bin\\g++.exe   -g -std=gnu++1z -o CMakeFiles\\untitled1.dir\\main.cpp.obj -c \"D:\\Douglas\\Pessoal\\Coding\\University\\Semestre 5\\Grafos\\tp-grafos\\main.cpp\"",
   "file": "D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/main.cpp",
   "output": "CMakeFiles/untitled1.dir/main.cpp.obj"
+},
+{
+  "directory": "D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/build",
+  "command": "C:\\MinGW\\bin\\g++.exe   -g -std=gnu++1z -o CMakeFiles\\untitled1.dir\\utils\\grafo.cpp.obj -c \"D:\\Douglas\\Pessoal\\Coding\\University\\Semestre 5\\Grafos\\tp-grafos\\utils\\grafo.cpp\"",
+  "file": "D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/utils/grafo.cpp",
+  "output": "CMakeFiles/untitled1.dir/utils/grafo.cpp.obj"
 }
 ]

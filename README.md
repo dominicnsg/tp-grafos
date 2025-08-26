@@ -29,7 +29,6 @@ src/                # Código fonte principal
 
 ### Linux/WSL
 Certifique-se de ter as ferramentas de compilação C++ (`g++`) e o utilitário `make` instalados.
-
     ```bash
     sudo apt-get install build-essential.
     ```

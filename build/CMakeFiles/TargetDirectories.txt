@@ -1,3 +1,0 @@
-D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/build/CMakeFiles/untitled1.dir
-D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/build/CMakeFiles/edit_cache.dir
-D:/Douglas/Pessoal/Coding/University/Semestre 5/Grafos/tp-grafos/build/CMakeFiles/rebuild_cache.dir

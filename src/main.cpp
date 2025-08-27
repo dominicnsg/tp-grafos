@@ -9,6 +9,8 @@ int main()
 {
     int V = 5;
 
+    // TODO imprimindo Grafo Nao-Direcionado (Lista de Adjacencias): na saída que está errado
+    
     cout << "--- Testando Grafo Nao-Direcionado ---" << endl;
     unique_ptr<IGrafo> grafoCompleto = make_unique<GrafoNaoDirecionado>(V);
     // Criar um grafo completo

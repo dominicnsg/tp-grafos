@@ -6,11 +6,11 @@
 #include "grafoDirecionadoPonderado.h"
 #include "grafoNaoDirecionadoPonderado.h"
 
+using namespace std;
+
 int main()
 {
     int V = 5;
-
-    // TODO imprimindo Grafo Direcionado (Lista de Adjacencias): na saída que está errado
 
     std::cout << "--- Testando Grafo Não-Direcionado ---\n";
     std::unique_ptr<IGrafo> grafoNaoDir = std::make_unique<GrafoNaoDirecionado>(V);
@@ -29,7 +29,7 @@ int main()
     grafoDir->adicionarAresta(4, 0);
     grafoDir->imprimirGrafo();
 
-    std::cout << "\n--- Testando Grafo Não-Direcionado Ponderado ---\n"; // TODO ERRADO
+    std::cout << "\n--- Testando Grafo Não-Direcionado Ponderado ---\n";
     GrafoNaoDirecionadoPonderado grafoNaoDirPeso(V);
     grafoNaoDirPeso.adicionarAresta(0, 1, 1.0);
     grafoNaoDirPeso.adicionarAresta(0, 2, 2.0);

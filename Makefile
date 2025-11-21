@@ -21,7 +21,7 @@ SOURCES = $(wildcard $(SRCDIR)/*.cpp)
 all: $(TARGET)
 
 # Regra para linkar e criar o executável final
-$(TARGET):
+$(TARGET): $(SOURCES)
 	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES)
 
 # Regra para limpar os arquivos gerados
@@ -30,3 +30,7 @@ clean:
 
 # Phony targets não representam arquivos
 .PHONY: all clean
+
+#compilar e executar
+run: all
+	./$(TARGET)

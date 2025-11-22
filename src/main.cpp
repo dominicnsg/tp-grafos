@@ -3,6 +3,7 @@
 #include "AlgoritmoEdmonds.h"
 #include "AlgoritmoKruskal.h"
 #include "SegmentadorImagem.h"
+#include "AlgoritmoTarjan.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -12,6 +13,7 @@ void imprimirUso() {
     cout << "Metodos: \n";
     cout << "  0: Edmonds (Arborescencia - Direcionado)\n";
     cout << "  1: Kruskal (MST - Nao Direcionado)\n";
+    cout << "  2: Tarjan (Arborescencia - Direcionado)\n";
     cout << "Exemplo: ./grafo_app teste.png 0 0.1\n";
 }
 
@@ -49,7 +51,7 @@ int main(int argc, char* argv[]) {
         cout << "Edmonds concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
         seg.salvarSegmentacao(resultado, "saida_edmonds.png", limiar);
     } 
-    else {
+    else if(metodo == 1) {
         cout << "--- Executando Kruskal (Nao-Direcionado) ---\n";
         // Convertendo para não direcionado (simplesmente reinterpretando as arestas)
         // Criamos um grafo nao direcionado com os mesmos dados
@@ -72,6 +74,18 @@ int main(int argc, char* argv[]) {
         // Salvar (Cast para grafo direcionado para reaproveitar a função de salvar)
         // Isso funciona porque GrafoNaoDirecionado herda de Direcionado
         seg.salvarSegmentacao(mst, "saida_kruskal.png", limiar);
+
+    } else if (metodo == 2) { // Novo código 2 para Tarjan
+        cout << "--- Executando Tarjan (Otimizado) ---\n";
+        AlgoritmoTarjan tarjan;
+        
+        start = high_resolution_clock::now();
+        // Nota: Tarjan também é para grafos direcionados, então usa grafoDir
+        resultado = tarjan.encontrarArborescenciaMinima(grafoDir, 0);
+        stop = high_resolution_clock::now();
+        
+        cout << "Tarjan concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
+        seg.salvarSegmentacao(resultado, "saida_tarjan.png", limiar);
     }
 
     return 0;

@@ -13,11 +13,11 @@ using namespace std::chrono;
 void imprimirUso() {
     cout << "Uso: ./grafo_app <imagem_entrada> <metodo> <limiar>\n";
     cout << "Metodos: \n";
-    cout << "  0: Edmonds (Arborescencia - Direcionado)\n";
-    cout << "  1: Kruskal (MST - Nao Direcionado)\n";
-    cout << "  2: Tarjan (Arborescencia - Direcionado)\n";
-    cout << "  3: Gabow (Arborescencia - Direcionado)\n";
-    cout << "Exemplo: ./grafo_app teste.png 0 0.05\n";
+    cout << "  0: Edmonds (Classico - O(VE))\n";
+    cout << "  1: Kruskal (Baseline MST - Nao Direcionado)\n";
+    cout << "  2: Tarjan  (Otimizado c/ Skew Heaps)\n";
+    cout << "  3: Gabow   (Adaptado c/ Skew Heaps)\n\n";
+    cout << "Exemplo: ./grafo_app teste.png 0 0.075\n";
 }
 
 int main(int argc, char* argv[]) {
@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
             seg.salvarSegmentacao(mst, "saida_kruskal.png", limiar);
 
         } else if (metodo == 2) {
-            cout << "--- Executando Tarjan (Otimizado) ---\n";
+            cout << "--- Executando Tarjan (Otimizado c/ Skew Heaps) ---\n";
             AlgoritmoTarjan tarjan;
             
             start = high_resolution_clock::now();
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
             cout << "Tarjan concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
             seg.salvarSegmentacao(resultado, "saida_tarjan.png", limiar);
         } else if (metodo == 3) { // Novo código para Gabow
-            cout << "--- Executando Gabow (c/ Skew Heaps) ---\n";
+            cout << "--- Executando Gabow Modificado (c/ Skew Heaps) ---\n";
             AlgoritmoGabow gabow;
             start = high_resolution_clock::now();
             resultado = gabow.encontrarArborescenciaMinima(grafoDir, 0);

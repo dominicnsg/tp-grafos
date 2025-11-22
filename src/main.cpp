@@ -1,107 +1,77 @@
 #include <iostream>
-#include <memory>
-
-#include "grafoDirecionado.h"
-#include "grafoNaoDirecionado.h"
-#include "grafoDirecionadoPonderado.h"
-#include "grafoNaoDirecionadoPonderado.h"
+#include <chrono> // Para medir tempo
 #include "AlgoritmoEdmonds.h"
+#include "AlgoritmoKruskal.h"
 #include "SegmentadorImagem.h"
 
 using namespace std;
+using namespace std::chrono;
 
-int main()
-{
-    // int V = 5;
+void imprimirUso() {
+    cout << "Uso: ./grafo_app <imagem_entrada> <metodo> <limiar>\n";
+    cout << "Metodos: \n";
+    cout << "  0: Edmonds (Arborescencia - Direcionado)\n";
+    cout << "  1: Kruskal (MST - Nao Direcionado)\n";
+    cout << "Exemplo: ./grafo_app foto.jpg 0 50.0\n";
+}
 
-    // std::cout << "--- Testando Grafo Não-Direcionado ---\n";
-    // std::unique_ptr<IGrafo> grafoNaoDir = std::make_unique<GrafoNaoDirecionado>(V);
-    // // Criar um grafo completo
-    // for (int i = 0; i < V; ++i)
-    //     for (int j = i + 1; j < V; ++j)
-    //         grafoNaoDir->adicionarAresta(i, j);
-    // grafoNaoDir->imprimirGrafo();
+int main(int argc, char* argv[]) {
+    srand(time(NULL));
 
-    // std::cout << "\n--- Testando Grafo Direcionado ---\n";
-    // std::unique_ptr<IGrafo> grafoDir = std::make_unique<GrafoDirecionado>(V);
-    // grafoDir->adicionarAresta(0, 1);
-    // grafoDir->adicionarAresta(1, 2);
-    // grafoDir->adicionarAresta(2, 3);
-    // grafoDir->adicionarAresta(3, 4);
-    // grafoDir->adicionarAresta(4, 0);
-    // grafoDir->imprimirGrafo();
+    if (argc < 4) {
+        imprimirUso();
+        return 1;
+    }
 
-    // std::cout << "\n--- Testando Grafo Não-Direcionado Ponderado ---\n";
-    // GrafoNaoDirecionadoPonderado grafoNaoDirPeso(V);
-    // grafoNaoDirPeso.adicionarAresta(0, 1, 1.0);
-    // grafoNaoDirPeso.adicionarAresta(0, 2, 2.0);
-    // grafoNaoDirPeso.adicionarAresta(1, 3, 3.0);
-    // grafoNaoDirPeso.adicionarAresta(2, 4, 4.0);
-    // grafoNaoDirPeso.adicionarAresta(3, 4, 5.0);
-    // grafoNaoDirPeso.imprimirGrafo();
-
-    // std::cout << "\n--- Testando Grafo Direcionado Ponderado ---\n";
-    // GrafoDirecionadoPonderado grafoDirPeso(V);
-    // grafoDirPeso.adicionarAresta(0, 1, 2.5);
-    // grafoDirPeso.adicionarAresta(1, 2, 1.2);
-    // grafoDirPeso.adicionarAresta(2, 3, 3.0);
-    // grafoDirPeso.adicionarAresta(3, 4, 0.8);
-    // grafoDirPeso.adicionarAresta(4, 0, 4.1);
-    // grafoDirPeso.imprimirGrafo();
-
-    // std::cout << "\n--- Fim dos Testes ---\n";
-
-    // int V = 4;
-    // GrafoDirecionadoPonderado grafo(V);
-
-    // // Exemplo clássico onde Dijkstra falha ou onde há ciclo
-    // // 0 -> 1 (10)
-    // // 0 -> 2 (10)
-    // // 1 -> 3 (20)
-    // // 2 -> 3 (20)
-    // // 3 -> 1 (1)  <-- Ciclo entre 1 e 3 com peso baixo
-    
-    // // Raiz = 0
-    // grafo.adicionarAresta(0, 1, 10.0);
-    // grafo.adicionarAresta(0, 2, 10.0);
-    // grafo.adicionarAresta(1, 3, 20.0);
-    // grafo.adicionarAresta(2, 3, 20.0); // Outra opção para chegar em 3
-    // grafo.adicionarAresta(3, 1, 1.0);  // Ciclo! (1->3->1) custo total 21
-    
-    // // Se fosse guloso simples sem tratar ciclo, poderia ficar preso ou não otimizar.
-    // // Edmonds deve perceber que para manter o ciclo barato (1 <-> 3), 
-    // // ele deve entrar no ciclo pelo lugar mais barato.
-    
-    // AlgoritmoEdmonds edmonds;
-    // cout << "Calculando Arborescencia Minima (Raiz 0)...\n";
-    
-    // GrafoDirecionadoPonderado resultado = edmonds.encontrarArborescenciaMinima(grafo, 0);
-    
-    // resultado.imprimirGrafo();
-
-    srand(time(NULL)); // Semente para cores aleatórias
+    string inputPath = argv[1];
+    int metodo = stoi(argv[2]);
+    double limiar = stod(argv[3]);
 
     SegmentadorImagem seg;
-    string input = "teste.png"; // COLOQUE UMA IMAGEM PEQUENA AQUI
-    
-    if (seg.carregarImagem(input)) {
-        // 1. Converter Imagem -> Grafo
-        GrafoDirecionadoPonderado grafo = seg.criarGrafo();
+    if (!seg.carregarImagem(inputPath)) return 1;
 
-        // 2. Calcular Arborescência Mínima (Edmonds)
+    // Medir tempo de criação do grafo
+    auto start = high_resolution_clock::now();
+    GrafoDirecionadoPonderado grafoDir = seg.criarGrafo(); 
+    auto stop = high_resolution_clock::now();
+    cout << "Grafo criado em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
+
+    GrafoDirecionadoPonderado resultado(0); // Placeholder
+
+    if (metodo == 0) {
+        cout << "--- Executando Edmonds (Direcionado) ---\n";
         AlgoritmoEdmonds edmonds;
-        std::cout << "Rodando Edmonds (isso pode demorar)..." << std::endl;
         
-        // Usamos o vértice 0 (canto superior esquerdo) como raiz
-        GrafoDirecionadoPonderado arborescencia = edmonds.encontrarArborescenciaMinima(grafo, 0);
+        start = high_resolution_clock::now();
+        resultado = edmonds.encontrarArborescenciaMinima(grafoDir, 0);
+        stop = high_resolution_clock::now();
+        
+        cout << "Edmonds concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
+        seg.salvarSegmentacao(resultado, "saida_edmonds.png", limiar);
+    } 
+    else {
+        cout << "--- Executando Kruskal (Nao-Direcionado) ---\n";
+        // Convertendo para não direcionado (simplesmente reinterpretando as arestas)
+        // Criamos um grafo nao direcionado com os mesmos dados
+        GrafoNaoDirecionadoPonderado grafoNaoDir(grafoDir.numVertices());
+        for(const auto& a : grafoDir.getTodasArestas()) {
+            // Adiciona apenas uma direção para evitar duplicidade no peso, 
+            // a classe NaoDirecionado cuida da simetria lógica
+            if(a.origem < a.destino) // Pequeno truque para add aresta 1 vez só
+                 grafoNaoDir.adicionarAresta(a.origem, a.destino, a.peso);
+        }
 
-        // 3. Salvar Resultado Segmentado
-        // Limiar de corte: arestas com diferença de cor > 30 serão cortadas
-        seg.salvarSegmentacao(arborescencia, "resultado_segmentacao.png", 30.0);
+        AlgoritmoKruskal kruskal;
         
-        std::cout << "Imagem salva como resultado_segmentacao.png" << std::endl;
-    } else {
-        std::cout << "Nao foi possivel carregar a imagem." << std::endl;
+        start = high_resolution_clock::now();
+        GrafoNaoDirecionadoPonderado mst = kruskal.encontrarMST(grafoNaoDir);
+        stop = high_resolution_clock::now();
+        
+        cout << "Kruskal concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
+        
+        // Salvar (Cast para grafo direcionado para reaproveitar a função de salvar)
+        // Isso funciona porque GrafoNaoDirecionado herda de Direcionado
+        seg.salvarSegmentacao(mst, "saida_kruskal.png", limiar);
     }
 
     return 0;

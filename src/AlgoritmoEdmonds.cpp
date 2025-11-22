@@ -1,22 +1,23 @@
 #include "AlgoritmoEdmonds.h"
 #include <limits>
 #include <iostream>
+#include <map>
 #include <algorithm>
 
 using namespace std;
 
 GrafoDirecionadoPonderado AlgoritmoEdmonds::encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz) {
-    // Mapeamento inicial: 0..V-1
-    int V = grafo.numVertices();
-    vector<int> vertices(V);
-    for(int i=0; i < V; ++i) vertices[i] = i;
+    // 1. Prepara os dados para a primeira chamada
+    vector<int> vertices(grafo.numVertices());
+    for(int i=0; i < grafo.numVertices(); ++i) vertices[i] = i;
 
     vector<Aresta> todasArestas = grafo.getTodasArestas();
 
-    // Recursão com vetores em vez de maps para economizar pilha
+    // 2. Chama o algoritmo recursivo
     list<Aresta> arborescenciaArestas = edmondsRecursivo(vertices, todasArestas, raiz);
 
-    GrafoDirecionadoPonderado resultado(V);
+    // 3. Constroi o grafo de resultado
+    GrafoDirecionadoPonderado resultado(grafo.numVertices());
     for(const auto& aresta : arborescenciaArestas) {
         resultado.adicionarAresta(aresta.origem, aresta.destino, aresta.peso);
     }
@@ -27,171 +28,210 @@ std::list<Aresta> AlgoritmoEdmonds::edmondsRecursivo(const std::vector<int>& ver
                                                      const std::vector<Aresta>& arestas, 
                                                      int raiz) {
     
-    // Encontrar o maior ID para dimensionar os vetores (evita usar std::map)
-    int maxId = -1;
-    for(int v : vertices) if(v > maxId) maxId = v;
-    // Se houver contrações, IDs podem ser maiores que vertices.size, então buscamos nas arestas também
-    for(const auto& a : arestas) {
-        if(a.origem > maxId) maxId = a.origem;
-        if(a.destino > maxId) maxId = a.destino;
-    }
+    // --- PASSO 1: Seleção Gulosa (Menor aresta de entrada para cada vértice) ---
+    map<int, Aresta> menoresArestasEntrada;
+    
+    for (int v : vertices) {
+        if (v == raiz) continue; // Raiz não precisa de aresta de entrada
 
-    // Usamos vector em vez de map para performance e menos memória na stack
-    // O índice do vetor é o ID do vértice
-    vector<Aresta> menoresArestas(maxId + 1, Aresta(-1, -1, numeric_limits<double>::max()));
-    vector<bool> temEntrada(maxId + 1, false);
+        Aresta menorAresta(-1, -1, numeric_limits<double>::max());
+        bool encontrou = false;
 
-    // --- PASSO 1: Seleção Gulosa ---
-    for (const auto& aresta : arestas) {
-        if (aresta.destino == aresta.origem) continue; // Ignora auto-loops
-        if (aresta.destino == raiz) continue;          // Raiz não tem pai
+        for (const auto& aresta : arestas) {
+            if (aresta.destino == v && aresta.origem != v) { // Ignora auto-loops
+                if (aresta.peso < menorAresta.peso) {
+                    menorAresta = aresta;
+                    encontrou = true;
+                }
+            }
+        }
 
-        // Precisamos verificar se o destino está no conjunto de vértices atual
-        // (Uma otimização seria usar um vetor booleano 'ativo')
-        
-        if (aresta.peso < menoresArestas[aresta.destino].peso) {
-            menoresArestas[aresta.destino] = aresta;
-            temEntrada[aresta.destino] = true;
+        if (encontrou) {
+            menoresArestasEntrada.insert({v, menorAresta});
+        } else {
+            // Se algum vértice (exceto raiz) não tem entrada, não existe arborescência completa.
+            // Em segmentação de imagem, isso raramente acontece se o grafo for conexo.
+            // Retornamos o que for possível ou lançamos erro.
         }
     }
 
     // --- PASSO 2: Detecção de Ciclos ---
-    vector<int> grupo(maxId + 1, -1);
-    vector<int> visitado(maxId + 1, 0); // 0: branco, 1: cinza, 2: preto
-    
+    // Vamos verificar se as arestas escolhidas formam ciclos
+    map<int, int> grupo; // Mapeia vertice -> ID do ciclo (ou -1 se não estiver em ciclo)
     int novoIdCiclo = -1;
     vector<int> cicloDetectado;
 
+    map<int, int> visitado; // 0: não visitado, 1: visitando, 2: visitado
+    map<int, int> pai; 
+
+    // Inicializa estruturas
+    for(int v : vertices) {
+        grupo[v] = -1; 
+        visitado[v] = 0;
+    }
+
     for (int v : vertices) {
         if (v == raiz || visitado[v] == 2) continue;
-
+        
         int atual = v;
         while (atual != raiz && visitado[atual] != 2) {
-            visitado[atual] = 1;
+            visitado[atual] = 1; // Marcando como visitando caminho atual
             
-            if (!temEntrada[atual]) break; // Sem pai, caminho morre
+            if (menoresArestasEntrada.find(atual) == menoresArestasEntrada.end()) break; // Sem pai
 
-            int pai = menoresArestas[atual].origem;
+            int proximo = menoresArestasEntrada.at(atual).origem;
             
-            if (visitado[pai] == 1) {
-                // CICLO DETECTADO
-                novoIdCiclo = pai; // Usamos o ID do nó de fechamento como base, mas idealmente seria um novo ID único maior
-                // Para garantir unicidade sem conflito, vamos pegar maxId + 1
-                novoIdCiclo = maxId + 1;
-
-                int temp = pai;
-                bool first = true;
-                while (temp != pai || first) {
-                    first = false;
+            if (visitado[proximo] == 1) {
+                // CICLO ENCONTRADO! 'proximo' é onde o ciclo fecha
+                novoIdCiclo = proximo; // Usamos um ID arbitrário dos nós do ciclo para representar o super-nó
+                
+                // Reconstrói o ciclo para a lista 'cicloDetectado'
+                int temp = proximo;
+                do {
                     cicloDetectado.push_back(temp);
-                    grupo[temp] = novoIdCiclo;
-                    temp = menoresArestas[temp].origem;
-                }
-                goto ciclo_encontrado;
+                    grupo[temp] = novoIdCiclo; // Marca que este nó pertence ao super-nó
+                    if(menoresArestasEntrada.find(temp) != menoresArestasEntrada.end())
+                        temp = menoresArestasEntrada.at(temp).origem;
+                    else break;
+                } while (temp != proximo);
+                
+                goto ciclo_encontrado_break; // Sai dos loops aninhados
             }
-            atual = pai;
+            
+            atual = proximo;
         }
-        
-        // Marca caminho como finalizado (preto)
+        // Marca caminho como finalizado
         atual = v;
-        while (atual != raiz && visitado[atual] == 1) {
+        while(atual != raiz && visitado[atual] == 1) {
             visitado[atual] = 2;
-            if(temEntrada[atual]) atual = menoresArestas[atual].origem;
+            if(menoresArestasEntrada.count(atual)) atual = menoresArestasEntrada.at(atual).origem;
             else break;
         }
     }
 
-    ciclo_encontrado:;
+    ciclo_encontrado_break:;
 
-    // --- CASO BASE: Sem ciclos ---
+    // --- CASO BASE: Se não houver ciclos, retornamos as arestas escolhidas ---
     if (cicloDetectado.empty()) {
         list<Aresta> resultado;
-        for (int v : vertices) {
-            if (v != raiz && temEntrada[v]) {
-                resultado.push_back(menoresArestas[v]);
-            }
+        for (auto const& [v, aresta] : menoresArestasEntrada) {
+            resultado.push_back(aresta);
         }
         return resultado;
     }
 
-    // --- PASSO 3: Contração ---
+    // --- PASSO 3: Contração do Ciclo (Recursão) ---
+    // Precisamos criar um novo conjunto de vértices e arestas
+    
+    // O 'novoIdCiclo' será o representante do super-nó
     vector<int> novosVertices;
-    bool cicloAdicionado = false;
     for(int v : vertices) {
-        if (grupo[v] == -1) {
-            novosVertices.push_back(v);
-        } else if (!cicloAdicionado) {
-            novosVertices.push_back(novoIdCiclo);
-            cicloAdicionado = true;
+        if (grupo[v] == -1) { 
+            novosVertices.push_back(v); // Vértices fora do ciclo continuam iguais
         }
     }
+    // Adiciona o representante do ciclo apenas uma vez
+    bool representanteJaAdicionado = false;
+    for(int v : novosVertices) if(v == novoIdCiclo) representanteJaAdicionado = true;
+    if(!representanteJaAdicionado) novosVertices.push_back(novoIdCiclo);
 
+
+    // Novas arestas (ajustadas)
     vector<Aresta> novasArestas;
-    novasArestas.reserve(arestas.size()); // Otimização de heap
 
     for (const auto& aresta : arestas) {
         int u = aresta.origem;
         int v = aresta.destino;
         
-        if (grupo[u] == -1 && grupo[v] == -1) { // Fora -> Fora
+        // Caso 1: Aresta totalmente fora do ciclo
+        if (grupo[u] == -1 && grupo[v] == -1) {
             novasArestas.push_back(aresta);
         }
-        else if (grupo[u] != -1 && grupo[v] == -1) { // Ciclo -> Fora
+        // Caso 2: Aresta saindo do ciclo para fora (u no ciclo -> v fora)
+        else if (grupo[u] != -1 && grupo[v] == -1) {
+            // Origem vira o super-nó
             Aresta nova = aresta;
-            nova.origem = novoIdCiclo;
+            nova.origem = novoIdCiclo; 
+            // Guardamos o ID original para recuperar depois
+            // Nota: o campo idOriginal na struct Aresta é crucial aqui. 
+            // Se você não tiver, use a própria aresta como referência.
             novasArestas.push_back(nova);
         }
-        else if (grupo[u] == -1 && grupo[v] != -1) { // Fora -> Ciclo
-            double pesoNoCiclo = menoresArestas[v].peso;
+        // Caso 3: Aresta entrando no ciclo de fora (u fora -> v no ciclo)
+        else if (grupo[u] == -1 && grupo[v] != -1) {
+            // Esta é a parte mágica de Edmonds/Chu-Liu:
+            // Novo Peso = Peso Original - Peso da aresta que já existe no ciclo apontando para v
+            double pesoCicloV = menoresArestasEntrada.at(v).peso;
+            double novoPeso = aresta.peso - pesoCicloV;
+            
             Aresta nova = aresta;
-            nova.destino = novoIdCiclo;
-            nova.peso = aresta.peso - pesoNoCiclo;
+            nova.destino = novoIdCiclo; // Destino vira super-nó
+            nova.peso = novoPeso;
+            // Importante: guardamos qual vértice REAL do ciclo esta aresta atingia (v)
+            // Podemos usar um campo auxiliar ou guardar a aresta original
+            // Aqui, assumimos que a struct Aresta tem dados suficientes ou passamos a original
+            novasArestas.push_back(nova);
         }
+        // Caso 4: Aresta interna do ciclo (ignora, pois o ciclo foi colapsado)
     }
 
-    int novaRaiz = (grupo[raiz] != -1) ? novoIdCiclo : raiz;
-    
     // Chamada Recursiva
+    int novaRaiz = (grupo[raiz] != -1) ? novoIdCiclo : raiz;
     list<Aresta> arborescenciaContraida = edmondsRecursivo(novosVertices, novasArestas, novaRaiz);
 
-    // --- PASSO 4: Expansão ---
+    // --- PASSO 4: Expansão (Desfazer o super-nó) ---
     list<Aresta> resultadoFinal;
-    int entradaCicloDestinoOriginal = -1;
+
+    // Mapeia qual vértice do ciclo foi o "ponto de entrada" escolhido pela recursão
+    int verticeEntradaCiclo = -1;
+    Aresta arestaEntradaCicloOriginal = Aresta(-1,-1,0);
 
     for (const auto& aresta : arborescenciaContraida) {
+        // Verifica se essa aresta aponta para o super-nó
         if (aresta.destino == novoIdCiclo) {
+            // Precisamos recuperar a aresta original. 
+            // Como modificamos o peso e destino, precisamos achar a original na lista 'arestas'
+            // que corresponde a esta 'aresta' contraída.
             
-            bool achou = false;
+            // Busca linear (pode ser otimizada com ID) para achar a original:
+            // A original é aquela que:
+            // 1. Tem o mesmo origem (aresta.origem)
+            // 2. Entra em ALGUÉM do ciclo (grupo[original.destino] != -1)
+            // 3. Tem o peso compatível com a fórmula (novoPeso = pesoOrig - pesoCiclo)
+            
             for(const auto& original : arestas) {
                 if (original.origem == aresta.origem && grupo[original.destino] != -1) {
-                    double pesoCiclo = menoresArestas[original.destino].peso;
-                    if (abs((original.peso - pesoCiclo) - aresta.peso) < 1e-5) {
-                        resultadoFinal.push_back(original);
-                        entradaCicloDestinoOriginal = original.destino;
-                        achou = true;
-                        break;
-                    }
+                     double pesoCiclo = menoresArestasEntrada.at(original.destino).peso;
+                     // Comparação com tolerância para float
+                     if (abs((original.peso - pesoCiclo) - aresta.peso) < 1e-9) {
+                         resultadoFinal.push_back(original);
+                         verticeEntradaCiclo = original.destino; // Onde quebramos o ciclo
+                         break;
+                     }
                 }
             }
-        }
+        } 
         else if (aresta.origem == novoIdCiclo) {
-            // Recuperar aresta que sai do ciclo (Ciclo -> Fora)
-            for(const auto& original : arestas) {
-                if (grupo[original.origem] != -1 && original.destino == aresta.destino && 
-                    abs(original.peso - aresta.peso) < 1e-5) {
-                    resultadoFinal.push_back(original);
-                    break;
-                }
-            }
+             // Aresta saindo do super-nó. Recuperar original.
+             // Original tem origem em algum lugar do ciclo e destino = aresta.destino
+             for(const auto& original : arestas) {
+                 if (grupo[original.origem] != -1 && original.destino == aresta.destino && 
+                     abs(original.peso - aresta.peso) < 1e-9) {
+                     resultadoFinal.push_back(original);
+                     break;
+                 }
+             }
         }
         else {
+            // Aresta que não tocou o ciclo, mantém
             resultadoFinal.push_back(aresta);
         }
     }
 
+    // Adiciona as arestas internas do ciclo, EXCETO a que entra no verticeEntradaCiclo
     for (int v : cicloDetectado) {
-        if (v != entradaCicloDestinoOriginal) {
-            resultadoFinal.push_back(menoresArestas[v]);
+        if (v != verticeEntradaCiclo) {
+            resultadoFinal.push_back(menoresArestasEntrada.at(v));
         }
     }
 

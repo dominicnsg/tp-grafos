@@ -51,6 +51,8 @@ double SegmentadorImagem::calcularDiferencaCorMedia(std::tuple<int,int,int> c1, 
 void SegmentadorImagem::aplicarSuavizacao() {
     if (!dadosImagem) return;
     std::vector<unsigned char> dadosSuavizados(largura * altura * 3);
+    
+    // Kernel de vizinhança em cruz
     int dx[] = {0, 1, -1, 0, 0}; 
     int dy[] = {0, 0, 0, 1, -1}; 
     
@@ -58,6 +60,8 @@ void SegmentadorImagem::aplicarSuavizacao() {
         for (int x = 0; x < largura; ++x) {
             long long r=0, g=0, b=0;
             int count = 0;
+            
+            // Média com vizinhos
             for (int i = 0; i < 5; ++i) {
                 int nx = x + dx[i], ny = y + dy[i];
                 if (nx >= 0 && nx < largura && ny >= 0 && ny < altura) {
@@ -77,10 +81,11 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
     int numPixels = largura * altura;
     
     UnionFind uf(numPixels);
-    double limiarAgrupamento = 15.0; // Pixels com dif < 15 serão o mesmo nó lógica
+    double limiarAgrupamento = 15.0; 
 
     std::cout << "Agrupando pixels similares (Superpixels)...\n";
     
+    // Agrupa pixels vizinhos muito parecidos para reduzir o grafo
     for (int y = 0; y < altura; ++y) {
         for (int x = 0; x < largura; ++x) {
             int u = getIndice(x, y);
@@ -99,11 +104,10 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
         }
     }
 
-    // 2. CALCULAR CORES MÉDIAS DOS SUPERPIXELS
+    // Calcula a cor média de cada superpixel
     std::map<int, int> rootToId;
     int nextId = 0;
     
-    // Estruturas temporárias para soma de cores
     std::vector<long long> sumR(numPixels, 0), sumG(numPixels, 0), sumB(numPixels, 0);
     std::vector<int> countPixel(numPixels, 0);
 
@@ -117,7 +121,6 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
         int superNoId = rootToId[root];
         pixelParaSuperno[i] = superNoId;
 
-        // Acumula cor
         sumR[superNoId] += dadosImagem[i*3+0];
         sumG[superNoId] += dadosImagem[i*3+1];
         sumB[superNoId] += dadosImagem[i*3+2];
@@ -133,7 +136,7 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
 
     std::cout << "Grafo Reduzido: " << numPixels << " pixels -> " << numSupernos << " supernos.\n";
 
-    // 3. CONSTRUIR O GRAFO LÓGICO
+    // Constrói o grafo de adjacência entre superpixels
     GrafoDirecionadoPonderado grafo(numSupernos);
     const double MAX_PESO = 441.67;
 
@@ -144,7 +147,7 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
             int uPixel = getIndice(x, y);
             int uSuper = pixelParaSuperno[uPixel];
 
-            int dx[] = {1, 0}; // Direita e Baixo
+            int dx[] = {1, 0}; 
             int dy[] = {0, 1};
 
             for(int i=0; i<2; ++i) {
@@ -154,13 +157,14 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
                     int vSuper = pixelParaSuperno[vPixel];
 
                     if (uSuper != vSuper) {
-
+                        // Evita duplicatas de arestas entre os mesmos supernos
                         if (arestasAdicionadas.find({uSuper, vSuper}) == arestasAdicionadas.end()) {
                             double peso = calcularDiferencaCorMedia(coresSupernos[uSuper], coresSupernos[vSuper]);
                             double pesoNorm = peso / MAX_PESO;
                             
+                            // Grafo bidirecional
                             grafo.adicionarAresta(uSuper, vSuper, pesoNorm);
-                            grafo.adicionarAresta(vSuper, uSuper, pesoNorm); // Bidirecional no grafo base
+                            grafo.adicionarAresta(vSuper, uSuper, pesoNorm); 
                             
                             arestasAdicionadas.insert({uSuper, vSuper});
                             arestasAdicionadas.insert({vSuper, uSuper});
@@ -176,10 +180,10 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
 
 
 void SegmentadorImagem::salvarSegmentacao(const GrafoDirecionadoPonderado& arborescencia, const std::string& saida, double limiarCorte) {
-    // O grafo 'arborescencia' agora contém SUPERNOS, não pixels.
+    // O grafo agora representa supernos
     int numSupernos = arborescencia.numVertices();
     
-    // 1. Busca conexa no grafo de supernos
+    // Gera componentes conexos cortando arestas acima do limiar
     std::vector<std::vector<int>> adj(numSupernos);
     for (const auto& aresta : arborescencia.getTodasArestas()) {
         if (aresta.peso <= limiarCorte) {
@@ -192,10 +196,11 @@ void SegmentadorImagem::salvarSegmentacao(const GrafoDirecionadoPonderado& arbor
     int numComponentes = 0;
     std::vector<std::tuple<unsigned char, unsigned char, unsigned char>> coresComponentes;
 
+    // Busca em largura (BFS) para identificar regiões
     for (int i = 0; i < numSupernos; ++i) {
         if (compSuperno[i] == -1) {
             numComponentes++;
-            // Cor aleatória para o componente final
+            
             coresComponentes.emplace_back(rand() % 255, rand() % 255, rand() % 255);
             
             std::queue<int> q;
@@ -216,16 +221,14 @@ void SegmentadorImagem::salvarSegmentacao(const GrafoDirecionadoPonderado& arbor
 
     std::cout << "Segmentacao final: " << numComponentes << " regioes.\n";
 
-    // 2. Pintar a imagem original mapeando Pixel -> Superno -> Componente -> Cor
+    // Mapeia cada pixel para a cor do seu componente correspondente
     std::vector<unsigned char> imagemSaida(largura * altura * 3);
     
     for(int i=0; i < largura * altura; ++i) {
         int superNoId = pixelParaSuperno[i];
-        // Se por algum acaso o pixel não tiver superno (erro), pinta de preto
         if (superNoId == -1) continue; 
         
         int componenteId = compSuperno[superNoId];
-        // Se o superno ficou isolado ou algo assim
         if (componenteId == -1) componenteId = 0;
 
         auto [r, g, b] = coresComponentes[componenteId];

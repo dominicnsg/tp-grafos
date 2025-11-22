@@ -1,6 +1,6 @@
 #include <iostream>
-#include <chrono> // Para medir tempo
-#include <stdexcept> // Necessário para tratamento de erros (try/catch)
+#include <chrono>
+#include <stdexcept> 
 #include "AlgoritmoEdmonds.h"
 #include "AlgoritmoKruskal.h"
 #include "SegmentadorImagem.h"
@@ -23,9 +23,9 @@ void imprimirUso() {
 int main(int argc, char* argv[]) {
     srand(time(NULL));
 
-    // 1. Bloco de segurança principal (Try-Catch)
+    // Try Catch
     try {
-        // Validação básica de quantidade de argumentos
+        // Validação de quantidade de argumentos
         if (argc < 4) {
             imprimirUso();
             return 1;
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
             throw runtime_error("Nao foi possivel carregar a imagem: " + inputPath);
         }
 
-        // 3. Pré-processamento (IMPORTANTE: Suavização antes de criar o grafo)
+        // 3. Pré-processamento
         cout << "Aplicando suavizacao (blur) para reduzir ruido...\n";
         seg.aplicarSuavizacao();
 

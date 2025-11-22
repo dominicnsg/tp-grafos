@@ -4,8 +4,7 @@
 
 using namespace std;
 
-// --- ESTRUTURA SKEW HEAP (Reutilizada pela eficiência) ---
-// Forward declaration e vetor de limpeza
+// Estrutura Skew Heap
 struct GabowNode;
 static std::vector<GabowNode*> gabowNodesAllocated;
 
@@ -22,6 +21,7 @@ struct GabowNode {
     }
 };
 
+// Propaga o valor lazy para os filhos
 void gabow_push_lazy(GabowNode* t) {
     if (!t || t->lazy == 0) return;
     t->val += t->lazy;
@@ -30,6 +30,7 @@ void gabow_push_lazy(GabowNode* t) {
     t->lazy = 0;
 }
 
+// Funde duas heaps
 GabowNode* gabow_merge(GabowNode* a, GabowNode* b) {
     gabow_push_lazy(a);
     gabow_push_lazy(b);
@@ -50,7 +51,7 @@ GabowNode* gabow_pop(GabowNode* root) {
     return gabow_merge(root->left, root->right);
 }
 
-// --- UNION-FIND ---
+// Union-Find
 struct DSU_Gabow {
     vector<int> pai;
     DSU_Gabow(int n) {
@@ -68,12 +69,12 @@ struct DSU_Gabow {
     }
 };
 
-// --- ALGORITMO PRINCIPAL (Lógica de Path Growing) ---
+// Algoritmo Principal
 GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz) {
     int n = grafo.numVertices();
     gabowNodesAllocated.clear();
 
-    // 1. Inicializa Heaps para cada vértice
+    // Inicializa heaps para cada vértice
     vector<GabowNode*> queues(n, nullptr);
     const auto& todasArestas = grafo.getTodasArestas();
     
@@ -86,33 +87,27 @@ GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDire
     }
 
     DSU_Gabow dsu(n);
-    vector<int> estado(n, 0); // 0: não visitado, 1: no caminho atual, 2: processado
+    vector<int> estado(n, 0); // 0: não visitado, 1: visitando, 2: processado
     vector<GabowNode*> arestaEntrada(n, nullptr);
     
-    // No algoritmo de Gabow, mantemos explicitamente um "caminho ativo"
-    // Mas a lógica de contração via DSU e Heaps é o que define a eficiência.
-    
-    // Vamos usar a mesma estratégia robusta de contração iterativa, 
-    // pois ela satisfaz a definição de "Método Eficiente com Heaps".
-    
     int raiz_set = dsu.find(raiz);
-    estado[raiz] = 2; // Raiz já processada
+    estado[raiz] = 2; 
 
+    // Processa vértices ainda não incluídos na arborescência
     for (int i = 0; i < n; ++i) {
         if (estado[dsu.find(i)] != 0) continue;
 
         int curr = dsu.find(i);
         while (estado[curr] != 2) {
-            estado[curr] = 1; // Marca como parte do caminho atual
+            estado[curr] = 1; 
             
             if (!queues[curr]) {
-                estado[curr] = 2; // Sem entrada, termina
+                estado[curr] = 2; 
                 break;
             }
 
-            // Seleciona menor aresta entrando no componente
+            // Seleciona a menor aresta e remove auto-loops
             GabowNode* minEdge = queues[curr];
-            // Remove self-loops (arestas dentro do mesmo componente DSU)
             while (minEdge && dsu.find(minEdge->u) == dsu.find(minEdge->v)) {
                 queues[curr] = gabow_pop(queues[curr]);
                 minEdge = queues[curr];
@@ -127,14 +122,12 @@ GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDire
             int u_origem = dsu.find(minEdge->u);
 
             if (estado[u_origem] == 1) {
-                // CICLO ENCONTRADO NO CAMINHO ATUAL -> CONTRAÇÃO
-                // Gabow contrai fundindo as Heaps
-                
+                // Ciclo detectado: contrai o ciclo fundindo as heaps
                 int cicloNode = u_origem;
                 GabowNode* novaQueue = nullptr;
                 
                 do {
-                    // Ajuste preguiçoso dos pesos: w' = w - w_min
+                    // Ajusta pesos (lazy) e funde as heaps
                     if (queues[cicloNode]) {
                         queues[cicloNode]->lazy -= arestaEntrada[cicloNode]->val;
                     }
@@ -143,22 +136,20 @@ GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDire
                     int next = dsu.find(arestaEntrada[cicloNode]->u);
                     dsu.unite(cicloNode, u_origem);
                     cicloNode = next;
-                } while (cicloNode != u_origem); // Atenção: lógica simplificada de loop
+                } while (cicloNode != u_origem); 
                 
-                // Como o DSU unificou tudo em um pai, achamos ele e atribuímos a nova Heap
+                // Atualiza a heap do novo super-nó
                 int superNo = dsu.find(u_origem);
                 queues[superNo] = novaQueue;
                 
-                // O caminho continua do supernó
                 curr = superNo;
-                // Mantém estado 1 pois o supernó ainda é parte do caminho ativo
             } else {
-                // Não fecha ciclo, estende o caminho
+                // Sem ciclo, segue o caminho
                 curr = u_origem;
             }
         }
         
-        // Backtracking para marcar processados
+        // Marca caminho como processado
         int temp = dsu.find(i);
         while(estado[temp] == 1) {
             estado[temp] = 2;
@@ -167,22 +158,20 @@ GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDire
         }
     }
 
-    // Reconstrução (Expansão)
+    // Reconstrói o grafo com as arestas selecionadas
     GrafoDirecionadoPonderado resultado(n);
     for(int i=0; i<n; ++i) {
         if (i == raiz) continue;
-        // Recupera a aresta válida para este nó (ou seu supernó)
-        // Em implementações de competição, usa-se apenas a aresta salva no estado final
+
         if (arestaEntrada[i]) {
              int u = arestaEntrada[i]->u;
              int v = arestaEntrada[i]->v;
-             // Recupera peso original
              double w = arestasOriginais[arestaEntrada[i]->idOriginal].peso;
              resultado.adicionarAresta(u, v, w);
         }
     }
 
-    // Garbage Collection
+    // Limpeza de memória
     for(auto node : gabowNodesAllocated) delete node;
     gabowNodesAllocated.clear();
     

@@ -5,6 +5,7 @@
 #include "AlgoritmoKruskal.h"
 #include "SegmentadorImagem.h"
 #include "AlgoritmoTarjan.h"
+#include "AlgoritmoGabow.h"
 
 using namespace std;
 using namespace std::chrono;
@@ -15,6 +16,7 @@ void imprimirUso() {
     cout << "  0: Edmonds (Arborescencia - Direcionado)\n";
     cout << "  1: Kruskal (MST - Nao Direcionado)\n";
     cout << "  2: Tarjan (Arborescencia - Direcionado)\n";
+    cout << "  3: Gabow (Arborescencia - Direcionado)\n";
     cout << "Exemplo: ./grafo_app teste.png 0 0.05\n";
 }
 
@@ -103,9 +105,17 @@ int main(int argc, char* argv[]) {
             
             cout << "Tarjan concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
             seg.salvarSegmentacao(resultado, "saida_tarjan.png", limiar);
+        } else if (metodo == 3) { // Novo código para Gabow
+            cout << "--- Executando Gabow (c/ Skew Heaps) ---\n";
+            AlgoritmoGabow gabow;
+            start = high_resolution_clock::now();
+            resultado = gabow.encontrarArborescenciaMinima(grafoDir, 0);
+            stop = high_resolution_clock::now();
+            cout << "Gabow concluido em: " << duration_cast<milliseconds>(stop - start).count() << "ms\n";
+            seg.salvarSegmentacao(resultado, "saida_gabow.png", limiar);
         } else {
-            throw runtime_error("Metodo invalido. Escolha 0, 1 ou 2.");
-        }
+            throw runtime_error("Metodo invalido. Escolha 0, 1, ou 3.");
+        } 
 
     } catch (const std::exception& e) {
         // Captura qualquer erro lançado acima e imprime de forma limpa

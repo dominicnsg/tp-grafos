@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <tuple>
 #include "grafoDirecionadoPonderado.h"
 
 class SegmentadorImagem {
@@ -10,24 +11,25 @@ public:
     SegmentadorImagem();
     ~SegmentadorImagem();
 
-    // 1. Carrega imagem do disco
     bool carregarImagem(const std::string& caminho);
 
-    // 2. Converte os pixels em um grafo direcionado
-    // Cada pixel é um nó. Arestas conectam aos 4 vizinhos. Peso = Diferença de cor.
     GrafoDirecionadoPonderado criarGrafo();
 
-    // 3. Salva a imagem segmentada baseada na Arborescência
-    // Recebe a arborescência gerada pelo Edmonds e um limiar (threshold) de corte
     void salvarSegmentacao(const GrafoDirecionadoPonderado& arborescencia, const std::string& saida, double limiarCorte);
+    
+    void aplicarSuavizacao(); 
 
 private:
-    unsigned char* dadosImagem; // Array de pixels (R, G, B, R, G, B...)
+    unsigned char* dadosImagem;
     int largura, altura, canais;
+   
+    std::vector<int> pixelParaSuperno;
+    
+    std::vector<std::tuple<int, int, int>> coresSupernos;
 
-    // Função auxiliar: Distância Euclidiana RGB
     double calcularDiferencaCor(int idx1, int idx2);
-    // Função auxiliar: Coordenada (x,y) para Índice Linear
+    double calcularDiferencaCorMedia(std::tuple<int,int,int> c1, std::tuple<int,int,int> c2);
+    
     int getIndice(int x, int y);
 };
 

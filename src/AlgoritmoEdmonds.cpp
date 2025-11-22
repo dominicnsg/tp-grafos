@@ -27,6 +27,10 @@ GrafoDirecionadoPonderado AlgoritmoEdmonds::encontrarArborescenciaMinima(GrafoDi
 std::list<Aresta> AlgoritmoEdmonds::edmondsRecursivo(const std::vector<int>& vertices, 
                                                      const std::vector<Aresta>& arestas, 
                                                      int raiz) {
+
+    if (vertices.empty() || (vertices.size() == 1 && vertices[0] == raiz)) {
+        return list<Aresta>();
+    }
     
     // --- PASSO 1: Seleção Gulosa (Menor aresta de entrada para cada vértice) ---
     map<int, Aresta> menoresArestasEntrada;

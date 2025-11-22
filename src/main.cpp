@@ -12,7 +12,7 @@ void imprimirUso() {
     cout << "Metodos: \n";
     cout << "  0: Edmonds (Arborescencia - Direcionado)\n";
     cout << "  1: Kruskal (MST - Nao Direcionado)\n";
-    cout << "Exemplo: ./grafo_app foto.jpg 0 50.0\n";
+    cout << "Exemplo: ./grafo_app teste.png 0 0.1\n";
 }
 
 int main(int argc, char* argv[]) {

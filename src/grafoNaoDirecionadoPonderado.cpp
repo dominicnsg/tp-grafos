@@ -10,12 +10,15 @@ void GrafoNaoDirecionadoPonderado::adicionarAresta(int v1, int v2, double peso)
     {
         adjPeso[v1].emplace_back(v2, peso);
         adjPeso[v2].emplace_back(v1, peso);
+
+        Aresta a(v1, v2, peso);
+        todasArestas.push_back(a);
     }
 }
 
 void GrafoNaoDirecionadoPonderado::imprimirGrafo() const
 {
-    std::cout << "Grafo Direcionado Ponderado (Lista de Adjacencias):\n";
+    std::cout << "Grafo Nao-Direcionado Ponderado (Lista de Adjacencias):\n";
     for (int v = 0; v < V; ++v)
     {
         std::cout << "Vertice " << v << " -> [ ";

@@ -6,7 +6,7 @@ CXX = g++
 # -Iinclude:  Diz ao compilador para procurar arquivos de header no diretório 'include'
 # -Wall:      Ativa todos os avisos (warnings), uma ótima prática!
 # -g:         Gera informações de debug
-CXXFLAGS = -std=c++17 -Iinclude -Wall -g
+CXXFLAGS = -std=c++17 -Iinclude -Wall -g -Wl,--stack,67108864
 
 # O nome do executável final
 TARGET = grafo_app

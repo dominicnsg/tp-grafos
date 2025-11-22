@@ -1,36 +1,36 @@
-# Nome do compilador C++
+# Compilador e Flags
 CXX = g++
+# Flags: C++17, Include, Warnings, Debug e AUMENTO DE PILHA (Essencial para Edmonds)
+CXXFLAGS = -std=c++17 -Iinclude -Wall -g -O2 -Wl,--stack,67108864
 
-# Flags de compilação:
-# -std=c++17: Usa o padrão C++17 (bom para unique_ptr, etc.)
-# -Iinclude:  Diz ao compilador para procurar arquivos de header no diretório 'include'
-# -Wall:      Ativa todos os avisos (warnings), uma ótima prática!
-# -g:         Gera informações de debug
-CXXFLAGS = -std=c++17 -Iinclude -Wall -g -Wl,--stack,67108864
-
-# O nome do executável final
+# Nome do Executável
 TARGET = grafo_app
 
-# Diretório dos fontes
+# Diretórios
 SRCDIR = src
+OBJDIR = obj
 
-# Encontra todos os arquivos .cpp no diretório de fontes
+# Encontra todos os .cpp e cria a lista de .o correspondentes
 SOURCES = $(wildcard $(SRCDIR)/*.cpp)
+OBJECTS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SOURCES))
 
-# Regra principal: compila o alvo (TARGET)
+# Regra Principal
 all: $(TARGET)
 
-# Regra para linkar e criar o executável final
-$(TARGET): $(SOURCES)
-	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCES)
+# Regra de Linkagem (Cria o executável final)
+$(TARGET): $(OBJECTS)
+	@echo "Linkando o executavel $(TARGET)..."
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(OBJECTS)
 
-# Regra para limpar os arquivos gerados
+# Regra de Compilação (Transforma cada .cpp em um .o dentro de obj/)
+$(OBJDIR)/%.o: $(SRCDIR)/%.cpp
+	@mkdir -p $(OBJDIR)
+	@echo "Compilando $<..."
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+# Limpeza completa (remove objetos, executável e imagens geradas)
 clean:
-	rm -f $(TARGET)
+	@echo "Limpando arquivos temporarios..."
+	rm -rf $(OBJDIR) $(TARGET) *.png
 
-# Phony targets não representam arquivos
 .PHONY: all clean
-
-#compilar e executar
-run: all
-	./$(TARGET)

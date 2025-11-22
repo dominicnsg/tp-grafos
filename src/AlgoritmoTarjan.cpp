@@ -8,6 +8,8 @@ using namespace std;
 
 // --- ESTRUTURAS INTERNAS PARA O ALGORITMO DE TARJAN ---
 
+static std::vector<struct HeapNode*> nodesAllocated;
+
 // Nó da Skew Heap (Fila de Prioridade Mesclável)
 struct HeapNode {
     double val;          // Peso da aresta (ajustado com lazy)
@@ -17,7 +19,9 @@ struct HeapNode {
     HeapNode *left, *right;
 
     HeapNode(double w, int _u, int _v, int _id) 
-        : val(w), lazy(0), u(_u), v(_v), idOriginal(_id), left(nullptr), right(nullptr) {}
+        : val(w), lazy(0), u(_u), v(_v), idOriginal(_id), left(nullptr), right(nullptr) {
+            nodesAllocated.push_back(this);
+        }
 };
 
 // Funções auxiliares da Skew Heap
@@ -272,5 +276,10 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
         }
     }
     
+    for(auto node : nodesAllocated) {
+        delete node;
+    }
+    nodesAllocated.clear(); // Limpa para a próxima execução
+
     return resultado;
 }

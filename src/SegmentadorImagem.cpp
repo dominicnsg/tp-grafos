@@ -77,7 +77,7 @@ GrafoDirecionadoPonderado SegmentadorImagem::criarGrafo() {
     int numPixels = largura * altura;
     
     UnionFind uf(numPixels);
-    double limiarAgrupamento = 30.0; // Pixels com dif < 20 serão o mesmo nó lógica
+    double limiarAgrupamento = 15.0; // Pixels com dif < 15 serão o mesmo nó lógica
 
     std::cout << "Agrupando pixels similares (Superpixels)...\n";
     

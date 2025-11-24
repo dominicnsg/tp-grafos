@@ -3,7 +3,7 @@
 #include <algorithm>
 
 using namespace std;
-
+// implementando algoritmo gabow original
 // --- ESTRUTURA SKEW HEAP (Reutilizada pela eficiência) ---
 // Forward declaration e vetor de limpeza
 struct GabowNode;

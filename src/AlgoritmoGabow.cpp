@@ -1,27 +1,35 @@
 #include "AlgoritmoGabow.h"
 #include <vector>
 #include <algorithm>
+#include <stack>
+#include <limits>
 
 using namespace std;
 
-// --- ESTRUTURA SKEW HEAP (Reutilizada pela eficiência) ---
-// Forward declaration e vetor de limpeza
-struct GabowNode;
-static std::vector<GabowNode*> gabowNodesAllocated;
+// --- ESTRUTURAS AUXILIARES ---
 
+// Nó do Skew Heap 
 struct GabowNode {
-    double val;
-    double lazy;
-    int u, v;
-    int idOriginal;
+    double val;       // Peso da aresta (pode sofrer lazy update)
+    double lazy;      // Valor a ser subtraído dos filhos (lazy propagation)
+    int u, v;         // Origem e Destino da aresta
+    int idOriginal;   // Índice da aresta na lista original
     GabowNode *left, *right;
 
     GabowNode(double w, int _u, int _v, int _id) 
-        : val(w), lazy(0), u(_u), v(_v), idOriginal(_id), left(nullptr), right(nullptr) {
-            gabowNodesAllocated.push_back(this);
-    }
+        : val(w), lazy(0), u(_u), v(_v), idOriginal(_id), left(nullptr), right(nullptr) {}
 };
 
+// Gerenciador de memória simples para evitar leaks durante a execução
+static std::vector<GabowNode*> nodePool;
+
+GabowNode* novoNo(double w, int u, int v, int id) {
+    GabowNode* node = new GabowNode(w, u, v, id);
+    nodePool.push_back(node);
+    return node;
+}
+
+// Propagação do valor 'lazy'
 void gabow_push_lazy(GabowNode* t) {
     if (!t || t->lazy == 0) return;
     t->val += t->lazy;
@@ -30,19 +38,20 @@ void gabow_push_lazy(GabowNode* t) {
     t->lazy = 0;
 }
 
+// Fusão de dois Skew Heaps
 GabowNode* gabow_merge(GabowNode* a, GabowNode* b) {
     gabow_push_lazy(a);
     gabow_push_lazy(b);
     if (!a) return b;
     if (!b) return a;
-    if (a->val > b->val) swap(a, b);
+    if (a->val > b->val) swap(a, b); // Mantém a propriedade de Min-Heap
     swap(a->left, a->right);
     a->left = gabow_merge(b, a->left);
     return a;
 }
 
 GabowNode* gabow_push(GabowNode* root, double w, int u, int v, int id) {
-    return gabow_merge(root, new GabowNode(w, u, v, id));
+    return gabow_merge(root, novoNo(w, u, v, id));
 }
 
 GabowNode* gabow_pop(GabowNode* root) {
@@ -50,10 +59,10 @@ GabowNode* gabow_pop(GabowNode* root) {
     return gabow_merge(root->left, root->right);
 }
 
-// --- UNION-FIND ---
-struct DSU_Gabow {
+// Estrutura Union-Find (DSU) para gerenciar componentes e super-nós
+struct DSU {
     vector<int> pai;
-    DSU_Gabow(int n) {
+    DSU(int n) {
         pai.resize(n);
         for(int i=0; i<n; ++i) pai[i] = i;
     }
@@ -68,123 +77,173 @@ struct DSU_Gabow {
     }
 };
 
-// --- ALGORITMO PRINCIPAL (Lógica de Path Growing) ---
+// Estruturas para reconstrução (Expansão dos ciclos)
+struct ComponenteCiclo {
+    int representante; // O representante DSU deste sub-componente no momento da contração
+    int edgeID;        // A aresta interna do ciclo que entra neste componente
+};
+
+struct CicloInfo {
+    int superNo; // O ID do novo super-nó criado
+    vector<ComponenteCiclo> componentes; // Lista dos componentes que formaram o ciclo
+};
+
+// --- ALGORITMO PRINCIPAL ---
+
 GrafoDirecionadoPonderado AlgoritmoGabow::encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz) {
     int n = grafo.numVertices();
-    gabowNodesAllocated.clear();
-
-    // 1. Inicializa Heaps para cada vértice
-    vector<GabowNode*> queues(n, nullptr);
     const auto& todasArestas = grafo.getTodasArestas();
     
-    vector<Aresta> arestasOriginais = todasArestas; 
-    for(size_t i=0; i<arestasOriginais.size(); ++i) arestasOriginais[i].idOriginal = i;
+    // Limpeza de memória estática de execuções anteriores
+    for(auto p : nodePool) delete p;
+    nodePool.clear();
 
-    for (const auto& aresta : arestasOriginais) {
+    // 1. Inicialização
+    vector<GabowNode*> queues(2 * n, nullptr); // 2*n pois criaremos super-nós
+    
+    for (size_t i = 0; i < todasArestas.size(); ++i) {
+        const auto& aresta = todasArestas[i];
         if (aresta.destino == raiz || aresta.origem == aresta.destino) continue;
-        queues[aresta.destino] = gabow_push(queues[aresta.destino], aresta.peso, aresta.origem, aresta.destino, aresta.idOriginal);
+        queues[aresta.destino] = gabow_push(queues[aresta.destino], aresta.peso, aresta.origem, aresta.destino, (int)i);
     }
 
-    DSU_Gabow dsu(n);
-    vector<int> estado(n, 0); // 0: não visitado, 1: no caminho atual, 2: processado
-    vector<GabowNode*> arestaEntrada(n, nullptr);
+    DSU dsu(2 * n);
+    vector<int> estado(2 * n, 0); // 0: não visitado, 1: visitando (no caminho), 2: processado
+    vector<int> arestaEntradaEscolhida(2 * n, -1); // ID da aresta escolhida para entrar no componente i
+    vector<int> paiNaHierarquia(2 * n, -1); // Para rastrear a árvore de super-nós na expansão
+    stack<CicloInfo> pilhaCiclos;
     
-    // No algoritmo de Gabow, mantemos explicitamente um "caminho ativo"
-    // Mas a lógica de contração via DSU e Heaps é o que define a eficiência.
-    
-    // Vamos usar a mesma estratégia robusta de contração iterativa, 
-    // pois ela satisfaz a definição de "Método Eficiente com Heaps".
-    
-    int raiz_set = dsu.find(raiz);
-    estado[raiz] = 2; // Raiz já processada
+    int numComponentes = n; // Contador para gerar IDs de super-nós
 
+    // 2. Fase de Contração (Path Growing)
     for (int i = 0; i < n; ++i) {
-        if (estado[dsu.find(i)] != 0) continue;
+        if (i == raiz) continue; 
+        
+        int u = dsu.find(i);
+        if (estado[u] != 0) continue;
 
-        int curr = dsu.find(i);
+        int curr = u;
         while (estado[curr] != 2) {
-            estado[curr] = 1; // Marca como parte do caminho atual
-            
-            if (!queues[curr]) {
-                estado[curr] = 2; // Sem entrada, termina
-                break;
-            }
+            estado[curr] = 1; // Marcado como 'no caminho atual'
 
-            // Seleciona menor aresta entrando no componente
-            GabowNode* minEdge = queues[curr];
-            // Remove self-loops (arestas dentro do mesmo componente DSU)
-            while (minEdge && dsu.find(minEdge->u) == dsu.find(minEdge->v)) {
+            // Obter a aresta de menor custo entrando em 'curr' (vinda de fora do componente)
+            GabowNode* minNode = queues[curr];
+            while (minNode && dsu.find(minNode->u) == curr) {
+                // Remove self-loops (arestas dentro do mesmo super-nó)
                 queues[curr] = gabow_pop(queues[curr]);
-                minEdge = queues[curr];
+                minNode = queues[curr];
             }
 
-            if (!minEdge) {
+            if (!minNode) {
+                // Sem arestas de entrada, não é possível conectar este componente
                 estado[curr] = 2;
                 break;
             }
 
-            arestaEntrada[curr] = minEdge;
-            int u_origem = dsu.find(minEdge->u);
+            // Escolhemos provisoriamente esta aresta
+            arestaEntradaEscolhida[curr] = minNode->idOriginal;
+            int origem = dsu.find(minNode->u);
 
-            if (estado[u_origem] == 1) {
-                // CICLO ENCONTRADO NO CAMINHO ATUAL -> CONTRAÇÃO
-                // Gabow contrai fundindo as Heaps
+            if (estado[origem] == 1) {
+                // CICLO DETECTADO! (origem já está no caminho atual)
+                int novoSuperNo = numComponentes++;
+                CicloInfo ciclo;
+                ciclo.superNo = novoSuperNo;
+
+                GabowNode* heapUniao = nullptr;
                 
-                int cicloNode = u_origem;
-                GabowNode* novaQueue = nullptr;
-                
-                do {
-                    // Ajuste preguiçoso dos pesos: w' = w - w_min
-                    if (queues[cicloNode]) {
-                        queues[cicloNode]->lazy -= arestaEntrada[cicloNode]->val;
-                    }
-                    novaQueue = gabow_merge(novaQueue, queues[cicloNode]);
+                int iter = curr;
+                while (iter != origem) {
+                    // A aresta que entra em 'iter'
+                    int edgeId = arestaEntradaEscolhida[iter];
+                    ciclo.componentes.push_back({iter, edgeId});
+                    paiNaHierarquia[iter] = novoSuperNo;
                     
-                    int next = dsu.find(arestaEntrada[cicloNode]->u);
-                    dsu.unite(cicloNode, u_origem);
-                    cicloNode = next;
-                } while (cicloNode != u_origem); // Atenção: lógica simplificada de loop
+                    // Merge do heap, aplicando o ajuste lazy (w' = w - w_ciclo)
+                    GabowNode* h = queues[iter];
+                    if(h) h->lazy -= todasArestas[edgeId].peso;
+                    heapUniao = gabow_merge(heapUniao, h);
+                    
+                    dsu.unite(iter, novoSuperNo);
+                    
+                    iter = dsu.find(todasArestas[edgeId].origem);
+                }
                 
-                // Como o DSU unificou tudo em um pai, achamos ele e atribuímos a nova Heap
-                int superNo = dsu.find(u_origem);
-                queues[superNo] = novaQueue;
+                int edgeIdOrigem = minNode->idOriginal;
+                ciclo.componentes.push_back({origem, edgeIdOrigem});
+                paiNaHierarquia[origem] = novoSuperNo;
                 
-                // O caminho continua do supernó
-                curr = superNo;
-                // Mantém estado 1 pois o supernó ainda é parte do caminho ativo
+                GabowNode* h = queues[origem];
+                if(h) h->lazy -= todasArestas[edgeIdOrigem].peso;
+                heapUniao = gabow_merge(heapUniao, h);
+                dsu.unite(origem, novoSuperNo);
+                
+                // Finaliza criação do super-nó
+                pilhaCiclos.push(ciclo);
+                queues[novoSuperNo] = heapUniao;
+                estado[novoSuperNo] = 1; // Super-nó continua no caminho ativo
+                
+                // O próximo passo do loop continua a partir do super-nó
+                curr = novoSuperNo;
+                
             } else {
-                // Não fecha ciclo, estende o caminho
-                curr = u_origem;
+                // Não fechou ciclo, apenas estende o caminho
+                curr = origem;
             }
         }
         
-        // Backtracking para marcar processados
-        int temp = dsu.find(i);
-        while(estado[temp] == 1) {
+        // Backtracking para marcar como processado (estado 2)
+        int temp = u;
+        while (temp != -1 && estado[temp] == 1) {
             estado[temp] = 2;
-            if(arestaEntrada[temp]) temp = dsu.find(arestaEntrada[temp]->u);
-            else break;
+            if (temp == raiz || arestaEntradaEscolhida[temp] == -1) break;
+            
+            int parent = dsu.find(todasArestas[arestaEntradaEscolhida[temp]].origem);
+            if (parent == temp) break; 
+            temp = parent;
         }
     }
 
-    // Reconstrução (Expansão)
+    // 3. Fase de Expansão (Reconstrução)
+    while (!pilhaCiclos.empty()) {
+        CicloInfo ciclo = pilhaCiclos.top();
+        pilhaCiclos.pop();
+        
+        int superNo = ciclo.superNo;
+        int arestaQueEntraNoSuperNo = arestaEntradaEscolhida[superNo];
+        
+        int subComponenteEntrada = -1;
+        
+        if (arestaQueEntraNoSuperNo != -1) {
+            int destinoReal = todasArestas[arestaQueEntraNoSuperNo].destino;
+            
+            int temp = destinoReal;
+            while (paiNaHierarquia[temp] != superNo && paiNaHierarquia[temp] != -1) {
+                temp = paiNaHierarquia[temp];
+            }
+            subComponenteEntrada = temp;
+        }
+        
+        // Resolve as arestas para os componentes internos
+        for (const auto& comp : ciclo.componentes) {
+            if (comp.representante == subComponenteEntrada) {
+                arestaEntradaEscolhida[comp.representante] = arestaQueEntraNoSuperNo;
+            } else {
+                arestaEntradaEscolhida[comp.representante] = comp.edgeID;
+            }
+        }
+    }
+
+    // 4. Construção do Grafo Resultado
     GrafoDirecionadoPonderado resultado(n);
-    for(int i=0; i<n; ++i) {
+    for (int i = 0; i < n; ++i) {
         if (i == raiz) continue;
-        // Recupera a aresta válida para este nó (ou seu supernó)
-        // Em implementações de competição, usa-se apenas a aresta salva no estado final
-        if (arestaEntrada[i]) {
-             int u = arestaEntrada[i]->u;
-             int v = arestaEntrada[i]->v;
-             // Recupera peso original
-             double w = arestasOriginais[arestaEntrada[i]->idOriginal].peso;
-             resultado.adicionarAresta(u, v, w);
+        int edgeID = arestaEntradaEscolhida[i];
+        if (edgeID != -1) {
+            const auto& aresta = todasArestas[edgeID];
+            resultado.adicionarAresta(aresta.origem, aresta.destino, aresta.peso);
         }
     }
 
-    // Garbage Collection
-    for(auto node : gabowNodesAllocated) delete node;
-    gabowNodesAllocated.clear();
-    
     return resultado;
 }

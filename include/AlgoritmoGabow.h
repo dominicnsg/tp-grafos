@@ -5,7 +5,8 @@
 
 class AlgoritmoGabow {
 public:
-    // Implementação baseada em Heaps Mescláveis (Skew Heaps)
+    // Implementação do Algoritmo de Gabow (versão eficiente de Edmonds/Chu-Liu)
+    // Utiliza Skew Heaps para seleção de arestas e DSU para contração de ciclos.
     GrafoDirecionadoPonderado encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz);
 };
 

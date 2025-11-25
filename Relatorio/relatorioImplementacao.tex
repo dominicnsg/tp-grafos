@@ -1,0 +1,74 @@
+\documentclass[12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{geometry}
+\geometry{a4paper, margin=2.5cm}
+\usepackage{setspace}
+\usepackage{indentfirst}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\onehalfspacing
+
+\begin{document}
+
+% ================================================================================
+% RELATÓRIO DE IMPLEMENTAÇÃO
+% ================================================================================
+
+\section{Implementação}
+
+\subsection{Estruturas de Dados}
+
+A representação dos grafos utiliza \textbf{listas de adjacência}, adequada para grafos esparsos. A estrutura \textit{Union-Find} com \textit{path compression} e \textit{union by rank} é empregada tanto no pré-processamento (agrupamento de pixels) quanto nos algoritmos para detecção e contração de ciclos, garantindo complexidade amortizada $O(\alpha(n))$ por operação.
+
+\subsection{Estratégia de Superpixels}
+
+A modelagem direta de pixels como vértices ($V = N \times M$) resultaria em complexidade proibitiva. Adotamos uma estratégia de pré-processamento baseada em \textbf{Superpixels}: pixels vizinhos com similaridade de cor (distância Euclidiana RGB $< 15$) são agrupados via \textit{Union-Find}, formando vértices lógicos. Esta técnica reduziu grafos de $10^5$ pixels para $10^2$--$10^3$ supernós (redução de 99\%), viabilizando execução em tempo real. Um filtro de média (\textit{Box Blur}) é aplicado previamente para reduzir ruído e evitar super-segmentação.
+
+\subsection{Algoritmo de Edmonds}
+
+O algoritmo clássico de Edmonds (Chu-Liu, 1965) foi implementado como referência, seguindo a formulação recursiva com seleção gulosa, detecção de ciclos e contração de super-nós. Sua complexidade $O(VE)$ o torna inadequado para grafos maiores, motivando a implementação dos métodos otimizados.
+
+\subsection{Algoritmo de Tarjan (1977)}
+
+O algoritmo de Tarjan melhora a complexidade através do uso de \textbf{filas de prioridade mescláveis}. A ideia central é manter, para cada componente do grafo, uma heap contendo todas as arestas de entrada ordenadas por peso.
+
+\textbf{Fase de Contração:} O algoritmo processa vértices iterativamente. Para cada vértice $v$, seleciona-se a aresta de entrada de menor peso da heap correspondente. Se esta aresta forma um ciclo (detectado via marcação de estados), os componentes do ciclo são contraídos em um super-nó. As heaps dos componentes são \textit{fundidas} (operação \textit{meld}), e os pesos são ajustados via \textbf{propagação preguiçosa} (\textit{lazy propagation}): ao invés de atualizar cada aresta individualmente, armazena-se um valor de ajuste no nó raiz da heap, propagado apenas quando necessário.
+
+\textbf{Remoção de Auto-loops:} Durante a seleção da aresta mínima, arestas que se tornaram auto-loops (origem e destino no mesmo componente após contrações) são descartadas da heap.
+
+A complexidade resultante é $O(E \log V)$, onde o fator logarítmico deriva das operações de heap.
+
+\subsection{Algoritmo de Gabow, Galil, Spencer e Tarjan (1986)}
+
+O algoritmo de Gabow et al. refina a abordagem de Tarjan através da técnica de \textbf{Path Growing} (Crescimento de Caminho) e uma estrutura hierárquica para reconstrução da solução.
+
+\textbf{Path Growing:} Ao invés de processar vértices isoladamente, o algoritmo estende ``caminhos'' a partir de vértices não processados. Cada vértice assume um de três estados: \textit{novo}, \textit{ativo} (em processamento) ou \textit{processado}. Quando um caminho encontra um vértice ativo, um ciclo é detectado e contraído.
+
+\textbf{Contração Hierárquica:} Ciclos são registrados em uma pilha com informações sobre seus componentes e as arestas que os conectam. Cada super-nó mantém referência ao seu ``pai'' na hierarquia de contrações, permitindo rastrear a qual ciclo original cada vértice pertence.
+
+\textbf{Expansão:} Após processar todo o grafo, a pilha de ciclos é desempilhada em ordem reversa. Para cada ciclo, determina-se qual sub-componente recebe a aresta externa (que entra no super-nó) e quais mantêm suas arestas internas originais. Esta fase reconstrói a arborescência no grafo original.
+
+\subsection{Decisão de Projeto: Skew Heaps}
+
+Para ambos os algoritmos (Tarjan e Gabow), optou-se por \textbf{Skew Heaps} em substituição aos Fibonacci Heaps sugeridos na literatura original. Esta decisão fundamenta-se nos princípios de Engenharia de Algoritmos (Böther et al., 2023): embora Fibonacci Heaps ofereçam complexidade teórica ótima $O(m + n \log n)$, suas constantes ocultas e \textit{overhead} de memória frequentemente resultam em desempenho inferior para instâncias práticas.
+
+As Skew Heaps são árvores binárias auto-ajustáveis que suportam:
+\begin{itemize}
+    \item \texttt{merge(h1, h2)}: Fusão de duas heaps em $O(\log n)$ amortizado
+    \item \texttt{findMin(h)}: Acesso ao mínimo em $O(1)$
+    \item \texttt{deleteMin(h)}: Remoção do mínimo em $O(\log n)$ amortizado
+\end{itemize}
+
+A operação de fusão, essencial para contração de ciclos, é implementada recursivamente: compara-se as raízes, e a menor torna-se raiz da heap resultante, com seus filhos trocados (\textit{skew property}) para manter o balanceamento amortizado.
+
+A implementação inclui \textbf{lazy propagation} para ajuste de pesos: quando um ciclo é contraído, ao invés de percorrer todas as arestas subtraindo o peso da aresta removida, armazena-se este valor no campo \texttt{lazy} da raiz, propagando-o aos filhos apenas durante acessos subsequentes.
+
+Considerando que nossa estratégia de Superpixels já reduz o grafo para centenas de vértices, a complexidade $O(m \log n)$ das Skew Heaps é virtualmente indistinguível da ótima, garantindo código mais robusto e livre de vazamentos de memória.
+
+\subsection{Algoritmo de Kruskal (Baseline)}
+
+O algoritmo de Kruskal para MST não-direcionada foi implementado como \textit{baseline} comparativo, utilizando ordenação de arestas e \textit{Union-Find}. Os experimentos demonstraram que métodos direcionados (Tarjan, Gabow) preservam melhor gradientes de cor em transições suaves, validando a escolha da modelagem por arborescência.
+
+\end{document}

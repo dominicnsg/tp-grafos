@@ -2,19 +2,19 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
-#include <memory>
+#include <stack>
 
 using namespace std;
 
-// Estruturas internas
+// Gerenciador de memória para os nós da Heap
 static std::vector<struct HeapNode*> nodesAllocated;
 
 // Nó da Skew Heap (Fila de Prioridade)
 struct HeapNode {
-    double val;          // Peso ajustado
+    double val;          // Peso ajustado (chave)
     double lazy;         // Valor para propagação preguiçosa
-    int u, v;            // Aresta
-    int idOriginal;      // Referência para a aresta original
+    int u, v;            // Aresta (origem -> destino)
+    int idOriginal;      // ID original da aresta para recuperação
     HeapNode *left, *right;
 
     HeapNode(double w, int _u, int _v, int _id) 
@@ -23,7 +23,19 @@ struct HeapNode {
         }
 };
 
-// Aplica o valor lazy nos nós
+// Estruturas para reconstrução (Expansão dos ciclos) - CRÍTICO PARA A CORREÇÃO
+struct ComponenteCiclo {
+    int representante; // Qual nó (ou supernó) dentro do ciclo
+    int edgeID;        // A aresta interna do ciclo que aponta para ele
+};
+
+struct CicloInfo {
+    int superNo; 
+    vector<ComponenteCiclo> componentes; 
+};
+
+// --- FUNÇÕES DE HEAP (SKEW HEAP) ---
+
 void push_lazy(HeapNode* t) {
     if (!t || t->lazy == 0) return;
     t->val += t->lazy;
@@ -32,7 +44,6 @@ void push_lazy(HeapNode* t) {
     t->lazy = 0;
 }
 
-// Funde duas heaps mantendo a propriedade de min-heap
 HeapNode* merge(HeapNode* a, HeapNode* b) {
     push_lazy(a);
     push_lazy(b);
@@ -55,11 +66,8 @@ HeapNode* pop(HeapNode* root) {
     return merge(root->left, root->right);
 }
 
-// Union-Find
-// DSU Local: Assim como no algoritmo de Gabow, optou-se por uma DSU dedicada.
-// O gerenciamento das filas de prioridade (vetor 'heaps') depende estritamente
-// do identificador do representante do conjunto. O uso de Union-By-Rank generico
-// poderia alterar o representante imprevisivelmente, quebrando o mapeamento das heaps.
+// --- UNION-FIND LOCAL ---
+// Mantido local para garantir que o representante seja controlado pelo algoritmo
 struct DSU {
     vector<int> pai;
     DSU(int n) {
@@ -77,114 +85,162 @@ struct DSU {
     }
 };
 
-// Implementação Principal
+// --- IMPLEMENTAÇÃO PRINCIPAL ---
+
 GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz) {
     int n = grafo.numVertices();
-    
-    // Inicialização das Heaps
-    vector<HeapNode*> heaps(n, nullptr);
     const auto& todasArestas = grafo.getTodasArestas();
     
-    vector<Aresta> arestasOriginais = todasArestas; 
-    for(size_t i=0; i<arestasOriginais.size(); ++i) arestasOriginais[i].idOriginal = i;
+    // Limpeza de memória estática
+    // Nota: Em um código de produção real, use smart pointers ou pool objects.
+    // Aqui usamos vector estático para simplicidade conforme seu modelo.
+    nodesAllocated.clear(); 
 
-    // Preenche heaps ignorando loops e arestas para a raiz
-    for (const auto& aresta : arestasOriginais) {
-        if (aresta.destino == raiz) continue; 
-        if (aresta.origem == aresta.destino) continue; 
-        
-        heaps[aresta.destino] = push(heaps[aresta.destino], aresta.peso, aresta.origem, aresta.destino, aresta.idOriginal);
+    // 1. Inicialização
+    vector<HeapNode*> heaps(2 * n, nullptr); // 2*n para acomodar supernós
+    
+    for (size_t i = 0; i < todasArestas.size(); ++i) {
+        const auto& aresta = todasArestas[i];
+        if (aresta.destino == raiz || aresta.origem == aresta.destino) continue;
+        heaps[aresta.destino] = push(heaps[aresta.destino], aresta.peso, aresta.origem, aresta.destino, (int)i);
     }
 
-    DSU dsu(n);
-    vector<int> visitado(n, -1);
-    vector<HeapNode*> arestaEscolhida(n, nullptr);
+    DSU dsu(2 * n);
+    vector<int> visitado(2 * n, -1);
+    // Armazena o ID da aresta escolhida para entrar no componente i
+    vector<int> arestaEntradaEscolhida(2 * n, -1); 
+    vector<int> paiNaHierarquia(2 * n, -1); // Para rastrear quem está dentro de quem
+    stack<CicloInfo> pilhaCiclos;
     
-    int raiz_dsu = dsu.find(raiz);
-    visitado[raiz] = raiz; 
+    int numComponentes = n; // IDs para novos supernós
 
-    // Fase de Contração
+    // 2. Fase de Contração
+    // Diferente do Gabow (Path Growing), o Tarjan clássico itera sobre raízes arbitrárias
     for (int i = 0; i < n; ++i) {
-        if (visitado[dsu.find(i)] != -1) continue;
+        if (i == raiz) continue;
 
-        int curr = i;
-        while (visitado[dsu.find(curr)] == -1) {
-            int u = dsu.find(curr);
-            visitado[u] = i; 
+        int curr = dsu.find(i);
+        
+        // Enquanto não processamos este componente ou ele não tem pai definido
+        while (visitado[curr] == -1 && curr != dsu.find(raiz)) {
+            visitado[curr] = i; // Marca que estamos visitando 'curr' nesta iteração 'i'
 
-            if (!heaps[u]) {
-                break; // Componente sem entrada
+            if (!heaps[curr]) {
+                // Componente inalcançável ou esgotado
+                break; 
             }
 
-            // Seleciona a menor aresta e remove auto-loops
-            HeapNode* minEdge = heaps[u];
-            while (minEdge && dsu.find(minEdge->u) == dsu.find(minEdge->v)) {
-                heaps[u] = pop(heaps[u]);
-                minEdge = heaps[u];
+            // Pega a menor aresta de entrada
+            HeapNode* minEdge = heaps[curr];
+            // Remove auto-loops (arestas dentro do mesmo supernó)
+            while (minEdge && dsu.find(minEdge->u) == curr) {
+                heaps[curr] = pop(heaps[curr]);
+                minEdge = heaps[curr];
             }
-            
-            if (!minEdge) break; 
 
-            arestaEscolhida[u] = minEdge;
+            if (!minEdge) break;
+
+            // Escolhemos provisoriamente esta aresta
+            arestaEntradaEscolhida[curr] = minEdge->idOriginal;
             
-            int v_origem = dsu.find(minEdge->u);
-            
-            // Verifica se formou ciclo
-            if (visitado[v_origem] == i) {
-                // Ciclo encontrado: contração
-                int cicloNode = v_origem;
-                HeapNode* novaHeap = nullptr;
+            int origem = dsu.find(minEdge->u);
+
+            if (visitado[origem] == i) {
+                // CICLO DETECTADO! (origem foi visitada nesta mesma iteração)
+                int novoSuperNo = numComponentes++;
+                CicloInfo ciclo;
+                ciclo.superNo = novoSuperNo;
                 
-                // Funde as heaps do ciclo
+                HeapNode* heapUniao = nullptr;
+                int iter = curr;
+                
+                // Percorre o ciclo para fundir heaps e salvar info para reconstrução
                 while (true) {
-                    if (heaps[cicloNode]) {
-                        heaps[cicloNode]->lazy -= arestaEscolhida[cicloNode]->val;
-                    }
+                    // Salva info para expansão futura
+                    int edgeId = arestaEntradaEscolhida[iter];
+                    ciclo.componentes.push_back({iter, edgeId});
+                    paiNaHierarquia[iter] = novoSuperNo;
+
+                    // Merge do heap com lazy update
+                    HeapNode* h = heaps[iter];
+                    if (h) h->lazy -= todasArestas[edgeId].peso;
+                    heapUniao = merge(heapUniao, h);
+
+                    dsu.unite(iter, novoSuperNo);
+
+                    if (iter == origem) break;
                     
-                    novaHeap = merge(novaHeap, heaps[cicloNode]);
-                    
-                    int proximo = dsu.find(arestaEscolhida[cicloNode]->u);
-                    if (cicloNode == v_origem && proximo == v_origem) break; 
-                    
-                    dsu.unite(cicloNode, v_origem); 
-                    
-                    if (dsu.find(proximo) == dsu.find(v_origem)) break; 
-                    cicloNode = proximo;
+                    // Avança para o próximo nó "para trás" no ciclo
+                    iter = dsu.find(todasArestas[edgeId].origem);
                 }
+
+                // Finaliza supernó
+                heaps[novoSuperNo] = heapUniao;
+                pilhaCiclos.push(ciclo);
                 
-                // Atualiza o super-nó
-                int superNo = dsu.find(v_origem);
-                heaps[superNo] = novaHeap;
+                // O processamento continua a partir do novo supernó
+                curr = novoSuperNo;
+                visitado[curr] = -1; // Reset para permitir que o supernó seja parte de ciclos maiores
                 
-                curr = superNo;
-                visitado[superNo] = -1; // Permite revisitar o super-nó
             } else {
-                // Sem ciclo, avança
-                curr = v_origem;
+                // Não fechou ciclo, apenas avança
+                curr = origem;
+            }
+        }
+        
+        // Limpeza de marcação (opcional para essa lógica, mas boa prática)
+        // No Tarjan clássico, componentes processados são "comprimidos", 
+        // mas aqui mantemos simples.
+    }
+
+    // 3. Fase de Expansão (Reconstrução da Árvore)
+    while (!pilhaCiclos.empty()) {
+        CicloInfo ciclo = pilhaCiclos.top();
+        pilhaCiclos.pop();
+        
+        int superNo = ciclo.superNo;
+        int arestaQueEntraNoSuperNo = arestaEntradaEscolhida[superNo];
+        
+        int subComponenteEntrada = -1;
+        
+        // Descobre qual nó real dentro do supernó recebe a aresta externa
+        if (arestaQueEntraNoSuperNo != -1) {
+            int destinoReal = todasArestas[arestaQueEntraNoSuperNo].destino;
+            int temp = destinoReal;
+            
+            // Sobe na hierarquia até achar o filho direto deste supernó
+            while (paiNaHierarquia[temp] != superNo && paiNaHierarquia[temp] != -1) {
+                temp = paiNaHierarquia[temp];
+            }
+            subComponenteEntrada = temp;
+        }
+        
+        // Distribui as arestas:
+        // - O nó que recebe a aresta externa fica com ela.
+        // - Todos os outros nós do ciclo ficam com suas arestas internas (do ciclo).
+        for (const auto& comp : ciclo.componentes) {
+            if (comp.representante == subComponenteEntrada) {
+                arestaEntradaEscolhida[comp.representante] = arestaQueEntraNoSuperNo;
+            } else {
+                arestaEntradaEscolhida[comp.representante] = comp.edgeID;
             }
         }
     }
 
-    // Fase de Construção do Resultado
+    // 4. Construção do Grafo Final
     GrafoDirecionadoPonderado resultado(n);
-    
-    for(int i=0; i<n; ++i) {
+    for (int i = 0; i < n; ++i) {
         if (i == raiz) continue;
         
-        // Adiciona as arestas selecionadas nos heaps finais
-        if (arestaEscolhida[i]) {
-             int u = arestaEscolhida[i]->u;
-             int v = arestaEscolhida[i]->v;
-             double w = arestasOriginais[arestaEscolhida[i]->idOriginal].peso;
-             
-             resultado.adicionarAresta(u, v, w);
+        int edgeID = arestaEntradaEscolhida[i];
+        if (edgeID != -1) {
+            const auto& aresta = todasArestas[edgeID];
+            resultado.adicionarAresta(aresta.origem, aresta.destino, aresta.peso);
         }
     }
-    
-    // Limpeza de memória
-    for(auto node : nodesAllocated) {
-        delete node;
-    }
+
+    // Limpeza de memória dos nós alocados
+    for(auto p : nodesAllocated) delete p;
     nodesAllocated.clear();
 
     return resultado;

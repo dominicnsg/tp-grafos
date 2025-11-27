@@ -6,15 +6,15 @@
 
 using namespace std;
 
-// Gerenciador de memória para os nós da Heap
+// Gerenciador de memória
 static std::vector<struct HeapNode*> nodesAllocated;
 
-// Nó da Skew Heap (Fila de Prioridade)
+// Nó da Skew Heap
 struct HeapNode {
-    double val;          // Peso ajustado (chave)
+    double val;          // Peso ajustado
     double lazy;         // Valor para propagação preguiçosa
-    int u, v;            // Aresta (origem -> destino)
-    int idOriginal;      // ID original da aresta para recuperação
+    int u, v;            // Aresta
+    int idOriginal;      // ID original para recuperação
     HeapNode *left, *right;
 
     HeapNode(double w, int _u, int _v, int _id) 
@@ -23,10 +23,10 @@ struct HeapNode {
         }
 };
 
-// Estruturas para reconstrução (Expansão dos ciclos) - CRÍTICO PARA A CORREÇÃO
+// Estruturas para reconstrução
 struct ComponenteCiclo {
-    int representante; // Qual nó (ou supernó) dentro do ciclo
-    int edgeID;        // A aresta interna do ciclo que aponta para ele
+    int representante; 
+    int edgeID;        
 };
 
 struct CicloInfo {
@@ -34,7 +34,7 @@ struct CicloInfo {
     vector<ComponenteCiclo> componentes; 
 };
 
-// --- FUNÇÕES DE HEAP (SKEW HEAP) ---
+// Funções de Heap (Skew Heap)
 
 void push_lazy(HeapNode* t) {
     if (!t || t->lazy == 0) return;
@@ -66,8 +66,7 @@ HeapNode* pop(HeapNode* root) {
     return merge(root->left, root->right);
 }
 
-// --- UNION-FIND LOCAL ---
-// Mantido local para garantir que o representante seja controlado pelo algoritmo
+// Union-Find Local
 struct DSU {
     vector<int> pai;
     DSU(int n) {
@@ -85,19 +84,16 @@ struct DSU {
     }
 };
 
-// --- IMPLEMENTAÇÃO PRINCIPAL ---
-
+// Implementação Principal
 GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz) {
     int n = grafo.numVertices();
     const auto& todasArestas = grafo.getTodasArestas();
     
-    // Limpeza de memória estática
-    // Nota: Em um código de produção real, use smart pointers ou pool objects.
-    // Aqui usamos vector estático para simplicidade conforme seu modelo.
+    // Limpeza de memória
     nodesAllocated.clear(); 
 
-    // 1. Inicialização
-    vector<HeapNode*> heaps(2 * n, nullptr); // 2*n para acomodar supernós
+    // Inicialização das heaps
+    vector<HeapNode*> heaps(2 * n, nullptr); 
     
     for (size_t i = 0; i < todasArestas.size(); ++i) {
         const auto& aresta = todasArestas[i];
@@ -107,32 +103,28 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
 
     DSU dsu(2 * n);
     vector<int> visitado(2 * n, -1);
-    // Armazena o ID da aresta escolhida para entrar no componente i
     vector<int> arestaEntradaEscolhida(2 * n, -1); 
-    vector<int> paiNaHierarquia(2 * n, -1); // Para rastrear quem está dentro de quem
+    vector<int> paiNaHierarquia(2 * n, -1); 
     stack<CicloInfo> pilhaCiclos;
     
-    int numComponentes = n; // IDs para novos supernós
+    int numComponentes = n; 
 
-    // 2. Fase de Contração
-    // Diferente do Gabow (Path Growing), o Tarjan clássico itera sobre raízes arbitrárias
+    // Fase de Contração
     for (int i = 0; i < n; ++i) {
         if (i == raiz) continue;
 
         int curr = dsu.find(i);
         
-        // Enquanto não processamos este componente ou ele não tem pai definido
+        // Processa componentes ainda não resolvidos
         while (visitado[curr] == -1 && curr != dsu.find(raiz)) {
-            visitado[curr] = i; // Marca que estamos visitando 'curr' nesta iteração 'i'
+            visitado[curr] = i; 
 
             if (!heaps[curr]) {
-                // Componente inalcançável ou esgotado
-                break; 
+                break; // Componente inalcançável
             }
 
-            // Pega a menor aresta de entrada
+            // Remove auto-loops
             HeapNode* minEdge = heaps[curr];
-            // Remove auto-loops (arestas dentro do mesmo supernó)
             while (minEdge && dsu.find(minEdge->u) == curr) {
                 heaps[curr] = pop(heaps[curr]);
                 minEdge = heaps[curr];
@@ -140,13 +132,13 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
 
             if (!minEdge) break;
 
-            // Escolhemos provisoriamente esta aresta
+            // Seleciona provisoriamente esta aresta
             arestaEntradaEscolhida[curr] = minEdge->idOriginal;
             
             int origem = dsu.find(minEdge->u);
 
             if (visitado[origem] == i) {
-                // CICLO DETECTADO! (origem foi visitada nesta mesma iteração)
+                // Ciclo detectado
                 int novoSuperNo = numComponentes++;
                 CicloInfo ciclo;
                 ciclo.superNo = novoSuperNo;
@@ -154,14 +146,13 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
                 HeapNode* heapUniao = nullptr;
                 int iter = curr;
                 
-                // Percorre o ciclo para fundir heaps e salvar info para reconstrução
+                // Funde heaps do ciclo e salva info
                 while (true) {
-                    // Salva info para expansão futura
                     int edgeId = arestaEntradaEscolhida[iter];
                     ciclo.componentes.push_back({iter, edgeId});
                     paiNaHierarquia[iter] = novoSuperNo;
 
-                    // Merge do heap com lazy update
+                    // Merge com lazy update
                     HeapNode* h = heaps[iter];
                     if (h) h->lazy -= todasArestas[edgeId].peso;
                     heapUniao = merge(heapUniao, h);
@@ -170,7 +161,7 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
 
                     if (iter == origem) break;
                     
-                    // Avança para o próximo nó "para trás" no ciclo
+                    // Avança no ciclo
                     iter = dsu.find(todasArestas[edgeId].origem);
                 }
 
@@ -178,22 +169,17 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
                 heaps[novoSuperNo] = heapUniao;
                 pilhaCiclos.push(ciclo);
                 
-                // O processamento continua a partir do novo supernó
                 curr = novoSuperNo;
-                visitado[curr] = -1; // Reset para permitir que o supernó seja parte de ciclos maiores
+                visitado[curr] = -1; // Permite revisitar o supernó
                 
             } else {
-                // Não fechou ciclo, apenas avança
+                // Sem ciclo, avança
                 curr = origem;
             }
         }
-        
-        // Limpeza de marcação (opcional para essa lógica, mas boa prática)
-        // No Tarjan clássico, componentes processados são "comprimidos", 
-        // mas aqui mantemos simples.
     }
 
-    // 3. Fase de Expansão (Reconstrução da Árvore)
+    // Fase de Expansão
     while (!pilhaCiclos.empty()) {
         CicloInfo ciclo = pilhaCiclos.top();
         pilhaCiclos.pop();
@@ -203,21 +189,18 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
         
         int subComponenteEntrada = -1;
         
-        // Descobre qual nó real dentro do supernó recebe a aresta externa
+        // Encontra o sub-componente real dentro do super-nó
         if (arestaQueEntraNoSuperNo != -1) {
             int destinoReal = todasArestas[arestaQueEntraNoSuperNo].destino;
             int temp = destinoReal;
             
-            // Sobe na hierarquia até achar o filho direto deste supernó
             while (paiNaHierarquia[temp] != superNo && paiNaHierarquia[temp] != -1) {
                 temp = paiNaHierarquia[temp];
             }
             subComponenteEntrada = temp;
         }
         
-        // Distribui as arestas:
-        // - O nó que recebe a aresta externa fica com ela.
-        // - Todos os outros nós do ciclo ficam com suas arestas internas (do ciclo).
+        // Distribui as arestas internas e externas
         for (const auto& comp : ciclo.componentes) {
             if (comp.representante == subComponenteEntrada) {
                 arestaEntradaEscolhida[comp.representante] = arestaQueEntraNoSuperNo;
@@ -227,7 +210,7 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
         }
     }
 
-    // 4. Construção do Grafo Final
+    // Construção do Grafo Final
     GrafoDirecionadoPonderado resultado(n);
     for (int i = 0; i < n; ++i) {
         if (i == raiz) continue;
@@ -239,7 +222,7 @@ GrafoDirecionadoPonderado AlgoritmoTarjan::encontrarArborescenciaMinima(GrafoDir
         }
     }
 
-    // Limpeza de memória dos nós alocados
+    // Limpeza de memória
     for(auto p : nodesAllocated) delete p;
     nodesAllocated.clear();
 

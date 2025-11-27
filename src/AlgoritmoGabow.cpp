@@ -57,7 +57,11 @@ GabowNode* gabow_pop(GabowNode* root) {
     return gabow_merge(root->left, root->right);
 }
 
+
 // Estrutura Union-Find
+// DSU Local: Optou-se por uma implementacao dedicada ao inves da classe UnionFind.h
+// pois o algoritmo de Gabow exige uma politica de uniao especifica (o novo supernoDEVE ser o pai), 
+// o que e incompativel com a otimizacao 'Union by Rank' generica.
 struct DSU {
     vector<int> pai;
     DSU(int n) {

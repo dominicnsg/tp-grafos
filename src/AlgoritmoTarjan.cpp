@@ -56,6 +56,10 @@ HeapNode* pop(HeapNode* root) {
 }
 
 // Union-Find
+// DSU Local: Assim como no algoritmo de Gabow, optou-se por uma DSU dedicada.
+// O gerenciamento das filas de prioridade (vetor 'heaps') depende estritamente
+// do identificador do representante do conjunto. O uso de Union-By-Rank generico
+// poderia alterar o representante imprevisivelmente, quebrando o mapeamento das heaps.
 struct DSU {
     vector<int> pai;
     DSU(int n) {

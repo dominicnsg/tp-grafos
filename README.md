@@ -43,7 +43,7 @@ A organização das pastas e arquivos segue o padrão abaixo:
 │   ├── main.cpp
 │   ├── SegmentadorImagem.cpp
 │   └── (Implementações de grafos direcionados e não direcionados)
-└── (Imagens de entrada e saída na raiz do projeto)
+└── (Imagens de saída na raiz do projeto)
 ```
 ## Como Compilar e Executar
 

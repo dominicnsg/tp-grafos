@@ -42,6 +42,41 @@ A organização das pastas e arquivos segue o padrão abaixo:
 │   └── (Implementações de grafos direcionados e não direcionados)
 └── (Imagens de entrada e saída na raiz do projeto)
 
+## Configuração do Ambiente e Instalação
+
+Antes de compilar, é necessário preparar o ambiente de desenvolvimento instalando o compilador C++ e o utilitário Make.
+
+### 🐧 Linux / WSL (Windows Subsystem for Linux)
+
+No Linux (Ubuntu/Debian), basta instalar o pacote `build-essential`, que já inclui o compilador `g++`, o `make` e outras bibliotecas necessárias.
+
+1. Abra o terminal.
+2. Atualize a lista de pacotes e instale as ferramentas:
+   * ```bash
+   * sudo apt-get update
+   * sudo apt-get install build-essential
+Verifique se foi instalado corretamente digitando g++ --version e make --version.
+
+### 🪟 Windows (MinGW)
+
+No Windows, recomendamos o uso do MinGW para instalar o GCC (compilador) e o Make.
+
+1. Baixar: Acesse o SourceForge do MinGW e baixe o mingw-get-setup.exe.
+
+2. Instalar: Execute o instalador. Na tela de seleção de pacotes ("MinGW Installation Manager"), marque as seguintes caixas para instalação:
+	* mingw32-gcc-g++ (O compilador C++)
+	* mingw32-make (O utilitário Make)
+	* mingw32-base
+
+3. Aplicar: No menu superior, clique em Installation > Apply Changes e aguarde o download.
+
+4. Configurar o PATH (Importante):
+	* Pesquise no Windows por "Editar as variáveis de ambiente do sistema".
+	* Clique em Variáveis de Ambiente.
+	* Na seção "Variáveis do sistema" (parte de baixo), encontre a variável Path e clique em Editar.
+	* Clique em Novo e adicione o caminho da pasta bin do MinGW. Geralmente é: C:\MinGW\bin
+	* Clique em OK em todas as janelas.
+
 ## Como Compilar e Executar
 
 ### Linux/WSL

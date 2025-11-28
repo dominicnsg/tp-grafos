@@ -60,7 +60,7 @@
 \noindent A construção de estruturas otimizadas em grafos é uma parte essencial da computação moderna e aparece em áreas como redes de comunicação, segmentação de imagens e análise de grandes volumes de dados. Entre essas estruturas, duas ganham destaque: a árvore geradora mínima (MST) e a arborescência geradora mínima (DMST ou AGS). Apesar de tratarem de problemas parecidos, cada uma apresenta características próprias e certos desafios específicos. 
 Esses problemas vêm sendo estudados há muitos anos e deram origem a algoritmos que se tornaram clássicos, como os propostos por Edmonds, Tarjan e Gabow. Com o avanço das aplicações práticas, principalmente em visão computacional e processamento de imagens, a comparação entre essas técnicas voltou a ganhar importância. Métodos que antes eram considerados suficientes precisam ser reavaliados diante das exigências atuais, que pedem mais eficiência, precisão e robustez. 
 O objetivo deste trabalho é analisar esses problemas de forma aplicada, implementando algoritmos tanto para árvores quanto para arborescências mínimas e avaliando o comportamento de cada método em tarefas de segmentação de imagens. Mais do que reproduzir soluções já conhecidas, busca-se observar na prática como essas abordagens funcionam, comparando vantagens, limitações e o grau de adequação a diferentes situações computacionais. 
-O projeto envolve também uma integração entre teoria de grafos, implementação em C e C++, além de métodos experimentais de avaliação. A intenção é apresentar uma visão clara e fundamentada sobre como essas estruturas podem ser usadas em problemas reais, contribuindo para uma compreensão mais profunda e crítica dos algoritmos estudados. 
+O projeto envolve também uma integração entre teoria de grafos, implementação em C/C++, além de métodos experimentais de avaliação. A intenção é apresentar uma visão clara e fundamentada sobre como essas estruturas podem ser usadas em problemas reais, contribuindo para uma compreensão mais profunda e crítica dos algoritmos estudados. 
 
 \end{abstract}
 
@@ -120,7 +120,7 @@ O algoritmo de Kruskal para MST não-direcionada foi implementado como \textit{b
 \section{Experimentos e Resultados}
 \label{sec:resultados}
 
-Os experimentos foram conduzidos em um processador Ryzen 7 5700X3D com 32 GB de memória RAM. O conjunto de dados principal consiste em imagens de resoluções variadas, pré-processadas conforme a estratégia de Superpixels descrita na Seção 1.2. Para a construção do grafo lógico, utilizou-se um limiar de similaridade de cor $\delta_{pixel}=15$ (distância Euclidiana RGB) para o agrupamento de superpixels.
+Os experimentos foram conduzidos em um processador Ryzen 7 5700X3D com 32 GB de memória RAM. O conjunto de dados principal consiste em imagens de resoluções variadas, pré-processadas conforme a estratégia de Superpixels descrita na Seção 2.2. Para a construção do grafo lógico, utilizou-se um limiar de similaridade de cor $\delta_{pixel}=15$ (distância Euclidiana RGB) para o agrupamento de superpixels.
 
 Na etapa de segmentação final, os limiares de corte normalizado foram ajustados conforme a resolução: utilizou-se $\lambda=0.06$ para a imagem média e $\lambda=0.006$ para a imagem grande, visando manter a consistência da granularidade nas diferentes escalas (Tabela \ref{tab:tempo}).
 

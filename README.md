@@ -30,8 +30,10 @@ A organização das pastas e arquivos segue o padrão abaixo:
 ├── include/                # Arquivos de cabeçalho (.h)
 ├── obj/                    # Objetos de compilação (.o)
 ├── imagensTest/            # Imagens para testes e experimentos
-├── Relatorio/              # Relatório técnico e fontes TeX
-│   ├── Grafos.pdf
+├── docs/                   # Documentação e Relatório
+│   ├── images/
+│   │   └── comparação.jpg
+│   ├── Trabalho_Grafos.pdf
 │   └── main.tex
 ├── src/                    # Código fonte (.cpp)
 │   ├── AlgoritmoEdmonds.cpp
@@ -111,3 +113,12 @@ Teste em imagem pequena devido à complexidade do algoritmo.
 - O projeto utiliza C++17.
 - O executável gerado será `grafo_app` (Linux) ou `grafo_app.exe` (Windows).
 - O código fonte está em `src/` e os headers em `include/`.
+
+## Integrantes do Grupo
+- Alessandra Faria Rodrigues
+- Enzo Marques Pylo
+- Débora Luiza de Paula Silva
+- Gabriel Chaves Mendes
+- Guilherme Henrique da Silva Teodoro
+- Maria Eduarda P. Martins
+- Suzane Lemos de Lima

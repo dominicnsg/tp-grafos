@@ -29,6 +29,7 @@ A organização das pastas e arquivos segue o padrão abaixo:
 ├── README.md               # Documentação do projeto
 ├── include/                # Arquivos de cabeçalho (.h)
 ├── obj/                    # Objetos de compilação (.o)
+├── imagensTest/            # Imagens para testes e experimentos
 ├── Relatorio/              # Relatório técnico e fontes TeX
 │   ├── Grafos.pdf
 │   └── main.tex
@@ -53,11 +54,8 @@ Certifique-se de ter as ferramentas de compilação C++ (`g++`) e o utilitário 
 1. Abra o terminal na raiz do projeto.
 2. Execute o comando:
 	```bash
-	mingw32-make
+	make
 	```
-3. Como Executar
-
-A execução é realizada via linha de comando. O executável gerado será `grafo_app` (Linux) ou `grafo_app.exe` (Windows).
 
 ### Windows
 No Windows, é necessário instalar o `make` manualmente:
@@ -67,9 +65,7 @@ No Windows, é necessário instalar o `make` manualmente:
 3. Abra o terminal (cmd ou PowerShell) na raiz do projeto.
 4. Execute:
 	```cmd
-	mingw32-make
-	./grafo_app <nome_da_imagem> <id_algoritmo> <parametro_sigma>
-	(exemplo de uso: Executa o algoritmo 0 (Kruskal) na imagem media.jpg com limiar 0.075 -> ./grafo_app media.jpg 0 0.075)
+	make
 	```
 
 ### Sintaxe

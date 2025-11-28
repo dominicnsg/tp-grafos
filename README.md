@@ -46,7 +46,7 @@ A organização das pastas e arquivos segue o padrão abaixo:
 
 Antes de compilar, é necessário preparar o ambiente de desenvolvimento instalando o compilador C++ e o utilitário Make.
 
-### 🐧 Linux / WSL (Windows Subsystem for Linux)
+### Linux / WSL (Windows Subsystem for Linux)
 
 No Linux (Ubuntu/Debian), basta instalar o pacote `build-essential`, que já inclui o compilador `g++`, o `make` e outras bibliotecas necessárias.
 
@@ -57,7 +57,7 @@ No Linux (Ubuntu/Debian), basta instalar o pacote `build-essential`, que já inc
    * sudo apt-get install build-essential
 Verifique se foi instalado corretamente digitando g++ --version e make --version.
 
-### 🪟 Windows (MinGW)
+### Windows (MinGW)
 
 No Windows, recomendamos o uso do MinGW para instalar o GCC (compilador) e o Make.
 

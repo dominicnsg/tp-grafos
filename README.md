@@ -87,7 +87,7 @@ Utilize a tabela abaixo para escolher qual método executar no segundo argumento
 
 O terceiro argumento (<limiar>) define a sensibilidade do corte e controla o quão "agressiva" será a segmentação:
 
-* Valores Baixos (ex: 0.005 a 0.01): Preservam muitos detalhes. A imagem final terá muitas regiões pequenas e cores variadas (segmentação fina).
+* Valores Baixos (ex: 0.005 a 0.01): Preservam muitos detalhes. A imagem final terá muitas regiões pequenas e cores variadas (segmentação final).
 * Valores Altos (ex: 0.06 a 0.15): Fundem regiões similares. A imagem final terá poucas regiões grandes e mais homogêneas (segmentação grossa).
 
 > Regra Prática: Quanto maior o limiar, menos segmentada (mais abstrata) fica a imagem.

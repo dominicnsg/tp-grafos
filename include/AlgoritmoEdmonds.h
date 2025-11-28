@@ -10,9 +10,6 @@ public:
     GrafoDirecionadoPonderado encontrarArborescenciaMinima(GrafoDirecionadoPonderado& grafo, int raiz);
 
 private:
-    struct ResultadoEdmonds {
-        std::vector<Aresta> arestasEscolhidas;
-    };
 
     std::list<Aresta> edmondsRecursivo(const std::vector<int>& verticesAtuais, 
                                        const std::vector<Aresta>& arestasDisponiveis, 

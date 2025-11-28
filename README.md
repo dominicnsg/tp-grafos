@@ -72,7 +72,7 @@ No Windows, é necessário instalar o `make` manualmente:
 
 ### Sintaxe
 
-./grafo_app <caminho_da_imagem> <id_algoritmo> <limiar>
+./grafo_app <caminho_da_imagem> <id_algoritmo> <limiar_sigma>
 
 ### 1. IDs dos Algoritmos
 
